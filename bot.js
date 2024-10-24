@@ -160,8 +160,17 @@ const commands = [
 
     // //
 
-    // TODO - Community - Rank
-    // ! View rank - profile command basically
+    // TODO - Community - Info
+    // ! View Rank - profile command basically
+
+    // ! View Team
+    new SlashCommandBuilder()
+        .setName('view-team')
+        .setDescription('View a team')
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true)),
 
     // //
 
@@ -408,6 +417,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (commandName === 'leaderboard') { console.log(`leaderboard command ran`); await communityCommands.leaderboard.execute(interaction); }
     if (commandName === 'team-leaderboard') { console.log(`team-leaderboard command ran`); await communityCommands.teamLeaderboard.execute(interaction); }
     if (commandName === 'team-points') { console.log(`team-points command ran`); await communityCommands.teamPoints.execute(interaction); }
+    if (commandName === 'team-info') { console.log(`team-info command ran`); await communityCommands.teamInfo.execute(interaction); }
     // //
     // * Community Commands - Ranks
 
