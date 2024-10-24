@@ -59,6 +59,7 @@ const adminCommands = require('./commands/admin/admin-commands.js');
 const communityCommands = require('./commands/community/com-commands.js');
 const helpMenuCommands = require('./commands/help/help-commands.js');
 const configCommands = require('./commands/config/config-commands.js');
+import * as ping from 'ping'
 
 // //
 
@@ -395,16 +396,21 @@ client.on(Events.InteractionCreate, async interaction => {
     // * Help Menu
     if (commandName === 'help') { console.log(`help command ran`); await helpMenuCommands.help.execute(interaction); }
     // //
-    // * Admin Commands
+    // * Admin Configuration Commands - Setup, Edit, Remove Commands
+    if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await adminCommands.setupRank.execute(interaction); }
+    if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await adminCommands.editRank.execute(interaction); }
+    if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await adminCommands.removeRank.execute(interaction); } 
+    // //
+    // * Community Configuration Commands - Setup, Edit, Remove Commands
     // ! Add Commands Here
     // //
-    // * Community Commands
-    // ! Add Commands Here
-
+    // * Community Commands - Comps
+    if (commandName === 'leaderboard') { console.log(`leaderboard command ran`); await communityCommands.leaderboard.execute(interaction); }
+    if (commandName === 'team-leaderboard') { console.log(`team-leaderboard command ran`); await communityCommands.teamLeaderboard.execute(interaction); }
+    if (commandName === 'team-points') { console.log(`team-points command ran`); await communityCommands.teamPoints.execute(interaction); }
     // //
+    // * Community Commands - Ranks
 
-    // * Config Commands
-    // ! Add Commands Here
     // //
 });
 
