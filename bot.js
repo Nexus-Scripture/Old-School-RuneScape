@@ -13,6 +13,8 @@ const {
 } = require("discord.js");
 
 const { EmbedBuilder } = require('@discordjs/builders');
+const schedule = require('node-schedule');
+
 
 const client = new Client({ 
     intents: [
@@ -26,7 +28,9 @@ const client = new Client({
     partials: [
         'MESSAGE',
         'CHANNEL',
-        'REACTION'
+        'REACTION',
+        'GUILD_MEMBER',
+        'USER'
     ]
 });
 
@@ -59,7 +63,6 @@ const adminCommands = require('./commands/admin/admin-commands.js');
 const communityCommands = require('./commands/community/com-commands.js');
 const helpMenuCommands = require('./commands/help/help-commands.js');
 const configCommands = require('./commands/config/log-config/logging-commands.js');
-import * as ping from 'ping'
 
 // //
 
@@ -71,6 +74,8 @@ const commands = [
      * Author: 
      * @Jay 
     */
+    // //
+    // TODO - Setup Rank
     // * Setup Ranks for server - Role Managers > to use this command
     new SlashCommandBuilder()
         .setName('setup-ranks')
@@ -83,7 +88,7 @@ const commands = [
         .addIntegerOption(option =>
             option.setName('required-points')
                 .setDescription('Points required for the role')
-                .setRequired(true)).toJSON()
+                .setRequired(true))
         .addIntegerOption(option =>
             option.setName('required-days')
                 .setDescription('Days required for the role')
@@ -126,6 +131,31 @@ const commands = [
                 .setRequired(false)),
 
     // //
+    // TODO - Admin Type Commands
+    new SlashCommandBuilder()
+        .setName('announce')
+        .setDescription('Create an announcement with a customizable embed.')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+        .addStringOption(option => 
+            option.setName('title')
+                .setDescription('The title of the embed'))
+        .addStringOption(option => 
+            option.setName('color')
+                .setDescription('The color of the embed (hex code, e.g., #ff0000)'))
+        .addStringOption(option => 
+            option.setName('footer')
+                .setDescription('The footer text of the embed'))
+        .addStringOption(option => 
+            option.setName('image')
+                .setDescription('URL of the main image. Put .jpg if still image, .gif if animated, etc.)'))
+        .addChannelOption(option => 
+            option.setName('channel')
+                .setDescription('The channel to send the announcement to'))
+        .addStringOption(option => 
+            option.setName('notify_role')
+                .setDescription('The role to be notified when a new stream is detected')),
+
+    // //
 
     // TODO - Point System
     // ! Add Points
@@ -162,6 +192,13 @@ const commands = [
 
     // TODO - Community - Info
     // ! View Rank - profile command basically
+    new SlashCommandBuilder()
+        .setName('profile')
+        .setDescription('View your profile or another user\'s profile')
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('The user whose profile you want to view')
+                .setRequired(false)),
 
     // ! View Team
     new SlashCommandBuilder()
@@ -176,8 +213,42 @@ const commands = [
 
     // TODO - Team Related
     // ! Add Team?
+    new SlashCommandBuilder()
+        .setName('add-team')
+        .setDescription('Add a team')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('team-description')
+                .setDescription('Description of the team')
+                .setRequired(false)),
 
     // ! Remvoe team
+    new SlashCommandBuilder()
+        .setName('remove-team')
+        .setDescription('Remove a team')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true)),
+    
+    // ! Edit team
+    new SlashCommandBuilder()
+        .setName('edit-team')
+        .setDescription('Edit a team')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('team-description')
+                .setDescription('Description of the team')
+                .setRequired(false)),
 
     // //
 
@@ -202,7 +273,7 @@ client.once('ready', async () => {
                 
                 // If the server already exists, skip creation
                 if (existingServer) {
-                    console.log(`Server ${guild.name} already exists in the database.`);
+                    console.log(`Server "${guild.name}" already exists in the database.`);
                 } else {
                     // Create default entries for the server
                     await Server.create({
@@ -218,45 +289,41 @@ client.once('ready', async () => {
                     });
                 }
             } catch (error) {
-                console.error(`Error adding guild to database: ${guild.name} (${guild.id})`, error);
+                console.error(`Error adding guild or users to database: ${guild.name} (${guild.id})`, error);
             }
         }
 
-        // Load reaction roles before registering slash commands
-        await loadReactionRoles();
-        const reactionRoleConfigurations = getReactionRoleConfigurations();
-        console.log('Reaction role configurations loaded:', reactionRoleConfigurations);
-
-        // List all reaction roles to the console
-        for (const [guildId, configs] of reactionRoleConfigurations.entries()) {
-            for (const config of configs) {
+        console.log('Reached Job');
+        schedule.scheduleJob('0 * * * *', async () => {
+            const guilds = await client.guilds.fetch();
+    
+            for (const guild of guilds.values()) {
                 try {
-                    const guild = await client.guilds.fetch(guildId);
-                    
-                    console.log(`Fetching channel ID: ${config.channelId} for guild ${guild.name}`);
-                    const channel = await guild.channels.fetch(config.channelId); // Explicitly fetch the channel
+                    // Fetch members of the guild
+                    const members = await guild.members.fetch({ force: true });
     
-                    if (!channel) {
-                        console.log(`Channel not found: ${config.channelId} in guild ${guild.name}`);
-                        continue;
-                    }
-    
-                    const message = await channel.messages.fetch(config.messageId);
-    
-                    // Iterate through the reactions on the message using a proper async loop
-                    for (const reaction of message.reactions.cache.values()) {
-                        const users = await reaction.users.fetch();
-                        for (const user of users.values()) {
-                            if (!user.bot) {
-                                console.log(`Reaction found from user ${user.tag} on message ${message.id}`);
+                    for (const member of members.values()) {
+                        if (!member.user.bot) { // Exclude bots
+                            const existingUser = await User.findOne({ where: { userId: member.id, serverId: guild.id } });
+                            if (!existingUser) {
+                                await User.create({
+                                    userId: member.id,
+                                    username: member.user.username,
+                                    serverId: guild.id,
+                                    days: 0,
+                                    ranks: null,
+                                    points: 0
+                                });
+                                console.log(`Added user ${member.user.username} to the database.`);
                             }
                         }
                     }
                 } catch (error) {
-                    console.error(`Error processing guild ${guildId} and config ${config}:`, error);
+                    console.error(`Error adding users to database for guild: ${guild.name} (${guild.id})`, error);
                 }
             }
-        }
+        });
+        console.log('Finished Job');
 
         // Register slash commands for each guild dynamically
         for (const guild of guilds.values()) {
@@ -405,11 +472,17 @@ client.on(Events.InteractionCreate, async interaction => {
     // * Help Menu
     if (commandName === 'help') { console.log(`help command ran`); await helpMenuCommands.help.execute(interaction); }
     // //
+    // ? Admin Commands
+    if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCommands.addTeams.execute(interaction); }
+    if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCommands.removeTeams.execute(interaction); }
+    if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCommands.editTeams.execute(interaction); }
+    if (commandName === 'announce') { console.log(`announce command ran`); await adminCommands.announce.execute(interaction); }
+    // //
+    // ? Config Commands
     // * Admin Configuration Commands - Setup, Edit, Remove Commands
     if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await configCommands.setupRank.execute(interaction); }
     if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await configCommands.editRank.execute(interaction); }
     if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await configCommands.removeRank.execute(interaction); } 
-    // //
     // * Community Configuration Commands - Setup, Edit, Remove Commands
     // ! Add Commands Here
     // //

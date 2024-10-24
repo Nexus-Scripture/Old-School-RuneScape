@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { Server } = require('../models/models.js') // Adjust path to your database models
+const { Server } = require('../model/model.js') // Adjust path to your database models
 
 const logBuffers = {}; // Store logs by serverId
 

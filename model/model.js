@@ -24,7 +24,7 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: true,
     },
-    warnings: {
+    points: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
     }
@@ -89,16 +89,36 @@ const MilestoneLevels = sequelize.define('MilestoneLevels', {
     }
 });
 
+const Teams = sequelize.define('Teams', {
+    guildId: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    teamName: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    teamMembers: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    teamPoints: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+});
+
 // Syncing the models with the database
 (async () => {
     try {
         await User.sync(); // Create the User table if it doesn't exist
         await Server.sync(); // Create the Server table if it doesn't exist
         await MilestoneLevels.sync(); // Create the MilestoneLevel table if it doesn't exist
+        await Teams.sync(); // Create the Team table if it doesn't exist
         console.log('Database models synced successfully.');
     } catch (error) {
         console.error('Unable to sync models with the database:', error);
     }
 })();
 
-module.exports = { User, Server, MilestoneLevels };
+module.exports = { User, Server, MilestoneLevels, Teams };
