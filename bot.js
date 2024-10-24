@@ -135,10 +135,27 @@ const commands = [
 
     // TODO - Community - Comps
     // ! Leaderboard
+    new SlashCommandBuilder()
+        .setName('leaderboard')
+        .setDescription('Show the leaderboard'),
 
     // ! Team Leaderboard
+    new SlashCommandBuilder()
+        .setName('team-leaderboard')
+        .setDescription('Show the team leaderboard')
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true)),
 
     // ! Team Points
+    new SlashCommandBuilder()
+        .setName('team-points')
+        .setDescription('Show the team points')
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true)),
 
     // //
 
