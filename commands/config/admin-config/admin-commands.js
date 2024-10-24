@@ -41,13 +41,8 @@ module.exports = {
 
     announce: {
         async execute(interaction) {
-            // Check if the user has permission to manage messages
-            if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                return interaction.reply({ content: 'You do not have permission to make announcements.', ephemeral: true });
-            }
-
             await interaction.deferReply();
-    
+
             // Get Role for notification
             const roleId = interaction.options.getString('notify_role');
             const role = roleId || null;

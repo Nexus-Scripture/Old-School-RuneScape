@@ -467,32 +467,48 @@ client.on(Events.GuildMemberRemove, async member => {
 // ! Bot interaction = Handle interaction
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isCommand() && interaction.componentType !== 3) return;
-    const { commandName, options, guildId } = interaction;
+    const { commandName } = interaction;
 
+    // //
+
+    // ? Help Commands
     // * Help Menu
     if (commandName === 'help') { console.log(`help command ran`); await helpMenuCommands.help.execute(interaction); }
+
     // //
     // ? Admin Commands
-    if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCommands.addTeams.execute(interaction); }
-    if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCommands.removeTeams.execute(interaction); }
-    if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCommands.editTeams.execute(interaction); }
+
+    // if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCommands.addTeams.execute(interaction); }
+    // if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCommands.removeTeams.execute(interaction); }
+    // if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCommands.editTeams.execute(interaction); }
+
     if (commandName === 'announce') { console.log(`announce command ran`); await adminCommands.announce.execute(interaction); }
+
     // //
+
     // ? Config Commands
     // * Admin Configuration Commands - Setup, Edit, Remove Commands
-    if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await configCommands.setupRank.execute(interaction); }
-    if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await configCommands.editRank.execute(interaction); }
-    if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await configCommands.removeRank.execute(interaction); } 
+
+    // if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await configCommands.setupRank.execute(interaction); }
+    // if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await configCommands.editRank.execute(interaction); }
+    // if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await configCommands.removeRank.execute(interaction); } 
+
     // * Community Configuration Commands - Setup, Edit, Remove Commands
     // ! Add Commands Here
+
     // //
+
     // * Community Commands - Comps
-    if (commandName === 'leaderboard') { console.log(`leaderboard command ran`); await communityCommands.leaderboard.execute(interaction); }
-    if (commandName === 'team-leaderboard') { console.log(`team-leaderboard command ran`); await communityCommands.teamLeaderboard.execute(interaction); }
-    if (commandName === 'team-points') { console.log(`team-points command ran`); await communityCommands.teamPoints.execute(interaction); }
-    if (commandName === 'team-info') { console.log(`team-info command ran`); await communityCommands.teamInfo.execute(interaction); }
+
+    // if (commandName === 'leaderboard') { console.log(`leaderboard command ran`); await communityCommands.leaderboard.execute(interaction); }
+    // if (commandName === 'team-leaderboard') { console.log(`team-leaderboard command ran`); await communityCommands.teamLeaderboard.execute(interaction); }
+    // if (commandName === 'team-points') { console.log(`team-points command ran`); await communityCommands.teamPoints.execute(interaction); }
+    // if (commandName === 'team-info') { console.log(`team-info command ran`); await communityCommands.teamInfo.execute(interaction); }
+
     // //
+
     // * Community Commands - Ranks
+    // ! Add Commnads Here
 
     // //
 });
