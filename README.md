@@ -12,6 +12,9 @@
     <a href="https://github.com/JayNightmare/Old-School-RuneScape/pulls">
       <img alt="GitHub pull requests" src="https://img.shields.io/github/issues-pr/JayNightmare/Old-School-RuneScape?color=0088ff" />
     </a>
+    <a href="https://github.com/JayNightmare/Old-School-RuneScape/actions/workflows/node.js.yml">
+        <img alt="Node.js CI" src="https://github.com/JayNightmare/Old-School-RuneScape/actions/workflows/node.js.yml/badge.svg"/>
+    </a>
     <br/>
 </div>
 
