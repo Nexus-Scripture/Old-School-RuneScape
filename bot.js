@@ -12,10 +12,6 @@ const {
     AuditLogEvent,
 } = require("discord.js");
 
-const { EmbedBuilder } = require('@discordjs/builders');
-const schedule = require('node-schedule');
-
-
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
@@ -40,7 +36,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TEST_TOKEN);
 // //
 
 // ! Load values from Database
-const { User, Punishment, Server, MilestoneLevels } = require ('./model/model.js');
+const { User, Server, MilestoneLevels, Teams } = require ('./model/model.js');
 
 // //
 
@@ -60,6 +56,7 @@ const {  } = require('./commands/utils-functions/utils-rank.js');
 
 // ! Import command logic 
 const adminCommands = require('./commands/admin/admin-commands.js');
+const adminCongifCommands = require('./commands/config/admin-config/admin-commands.js')
 const communityCommands = require('./commands/community/com-commands.js');
 const helpMenuCommands = require('./commands/help/help-commands.js');
 const configCommands = require('./commands/config/log-config/logging-commands.js');
@@ -159,8 +156,38 @@ const commands = [
 
     // TODO - Point System
     // ! Add Points
+    new SlashCommandBuilder()
+        .setName('add-points')
+        .setDescription('Add points to a user.')
+        .addIntegerOption(option => 
+            option.setName('points')
+                .setDescription('Number of points to add')
+                .setRequired(true))
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('User to add points to')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(false)),
     
     // ! Remove Points 
+    new SlashCommandBuilder()
+        .setName('remove-points')
+        .setDescription('Remove points from a user.')
+        .addIntegerOption(option => 
+            option.setName('points')
+                .setDescription('Number of points to remove')
+                .setRequired(true))
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('User to remove points from')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(false)),
 
     // //
 
@@ -195,6 +222,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('profile')
         .setDescription('View your profile or another user\'s profile')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.VIEW_CHANNEL)
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('The user whose profile you want to view')
@@ -204,10 +232,16 @@ const commands = [
     new SlashCommandBuilder()
         .setName('view-team')
         .setDescription('View a team')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.VIEW_CHANNEL)
         .addStringOption(option =>
             option.setName('team-name')
                 .setDescription('Name of the team')
                 .setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('view-teams')
+        .setDescription('View all teams')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.VIEW_CHANNEL),
 
     // //
 
@@ -221,10 +255,19 @@ const commands = [
             option.setName('team-name')
                 .setDescription('Name of the team')
                 .setRequired(true))
+        .addUserOption(option =>
+            option.setName('team-leader')
+                .setDescription('The user whose profile you want to view')
+                .setRequired(true))
         .addStringOption(option =>
             option.setName('team-description')
                 .setDescription('Description of the team')
+                .setRequired(false))
+        .addStringOption(option => 
+            option.setName('team-image')
+                .setDescription('URL with image type (.gif, .jpg, .png, etc)')
                 .setRequired(false)),
+        
 
     // ! Remvoe team
     new SlashCommandBuilder()
@@ -246,8 +289,20 @@ const commands = [
                 .setDescription('Name of the team')
                 .setRequired(true))
         .addStringOption(option =>
+            option.setName('new-team-name')
+                .setDescription('New name of the team')
+                .setRequired(false))
+        .addStringOption(option =>
             option.setName('team-description')
                 .setDescription('Description of the team')
+                .setRequired(false))
+        .addStringOption(option =>
+            option.setName('team-image')
+                .setDescription('URL with image type (.gif, .jpg, .png, etc)')
+                .setRequired(false))
+        .addUserOption(option =>
+            option.setName('team-leader')
+                .setDescription('The user whose profile you want to view')
                 .setRequired(false)),
 
     // //
@@ -292,38 +347,6 @@ client.once('ready', async () => {
                 console.error(`Error adding guild or users to database: ${guild.name} (${guild.id})`, error);
             }
         }
-
-        console.log('Reached Job');
-        schedule.scheduleJob('0 * * * *', async () => {
-            const guilds = await client.guilds.fetch();
-    
-            for (const guild of guilds.values()) {
-                try {
-                    // Fetch members of the guild
-                    const members = await guild.members.fetch({ force: true });
-    
-                    for (const member of members.values()) {
-                        if (!member.user.bot) { // Exclude bots
-                            const existingUser = await User.findOne({ where: { userId: member.id, serverId: guild.id } });
-                            if (!existingUser) {
-                                await User.create({
-                                    userId: member.id,
-                                    username: member.user.username,
-                                    serverId: guild.id,
-                                    days: 0,
-                                    ranks: null,
-                                    points: 0
-                                });
-                                console.log(`Added user ${member.user.username} to the database.`);
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error(`Error adding users to database for guild: ${guild.name} (${guild.id})`, error);
-                }
-            }
-        });
-        console.log('Finished Job');
 
         // Register slash commands for each guild dynamically
         for (const guild of guilds.values()) {
@@ -402,15 +425,13 @@ client.on(Events.GuildDelete, async guild => {
 
         const existingServer = await Server.findOne({ where: { serverId: guild.id } });
         if (existingServer) {
-            await sequelize.transaction(async (t) => {
-                // Bulk delete all related data
-                await Promise.all([
-                    Server.destroy({ where: { serverId: guild.id }, transaction: t }),
-                    User.destroy({ where: { guildId: guild.id }, transaction: t }),
-                    MilestoneLevels.destroy({ where: { guildId: guild.id }, transaction: t }),
-                    Punishment.destroy({ where: { guildId: guild.id }, transaction: t })
-                ]);
-            });
+            // Bulk delete all related data 
+            await Promise.all([
+                Server.destroy({ where: { serverId: guild.id } }),
+                User.destroy({ where: { guildId: guild.id } }),
+                MilestoneLevels.destroy({ where: { guildId: guild.id } }),
+                Punishment.destroy({ where: { guildId: guild.id } })
+            ]);
 
             console.log(`Removed data for guild: ${guild.name}`);
         } else {
@@ -478,9 +499,9 @@ client.on(Events.InteractionCreate, async interaction => {
     // //
     // ? Admin Commands
 
-    // if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCommands.addTeams.execute(interaction); }
-    // if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCommands.removeTeams.execute(interaction); }
-    // if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCommands.editTeams.execute(interaction); }
+    if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCommands.addTeams.execute(interaction); }
+    if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCommands.removeTeams.execute(interaction); }
+    if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCommands.editTeams.execute(interaction); }
 
     if (commandName === 'announce') { console.log(`announce command ran`); await adminCommands.announce.execute(interaction); }
 
@@ -489,9 +510,9 @@ client.on(Events.InteractionCreate, async interaction => {
     // ? Config Commands
     // * Admin Configuration Commands - Setup, Edit, Remove Commands
 
-    // if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await configCommands.setupRank.execute(interaction); }
-    // if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await configCommands.editRank.execute(interaction); }
-    // if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await configCommands.removeRank.execute(interaction); } 
+    if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await configCommands.setupRank.execute(interaction); }
+    if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await configCommands.editRank.execute(interaction); }
+    if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await configCommands.removeRank.execute(interaction); } 
 
     // * Community Configuration Commands - Setup, Edit, Remove Commands
     // ! Add Commands Here
@@ -499,11 +520,12 @@ client.on(Events.InteractionCreate, async interaction => {
     // //
 
     // * Community Commands - Comps
-
-    // if (commandName === 'leaderboard') { console.log(`leaderboard command ran`); await communityCommands.leaderboard.execute(interaction); }
-    // if (commandName === 'team-leaderboard') { console.log(`team-leaderboard command ran`); await communityCommands.teamLeaderboard.execute(interaction); }
-    // if (commandName === 'team-points') { console.log(`team-points command ran`); await communityCommands.teamPoints.execute(interaction); }
-    // if (commandName === 'team-info') { console.log(`team-info command ran`); await communityCommands.teamInfo.execute(interaction); }
+    if (commandName === 'view-teams') { console.log(`view-teams command ran`); await communityCommands.viewTeams.execute(interaction); }
+    if (commandName === 'view-team') { console.log(`view-team command ran`); await communityCommands.viewTeam.execute(interaction); }
+    if (commandName === 'leaderboard') { console.log(`leaderboard command ran`); await communityCommands.leaderboard.execute(interaction); }
+    if (commandName === 'team-leaderboard') { console.log(`team-leaderboard command ran`); await communityCommands.teamLeaderboard.execute(interaction); }
+    if (commandName === 'team-points') { console.log(`team-points command ran`); await communityCommands.teamPoints.execute(interaction); }
+    if (commandName === 'team-info') { console.log(`team-info command ran`); await communityCommands.teamInfo.execute(interaction); }
 
     // //
 

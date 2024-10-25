@@ -98,14 +98,26 @@ const Teams = sequelize.define('Teams', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    teamMembers: {
+    teamDescription: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    teamLeader: {
         type: DataTypes.STRING,
         allowNull: false,
+    },
+    teamMembers: {
+        type: DataTypes.STRING,
+        allowNull: true,
     },
     teamPoints: {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
+    teamImage: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    }
 });
 
 // Syncing the models with the database
