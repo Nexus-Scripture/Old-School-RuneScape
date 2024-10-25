@@ -16,6 +16,10 @@ const User = sequelize.define('User', {
         allowNull: false,
         primaryKey: true,
     },
+    teamId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     days: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
@@ -93,6 +97,12 @@ const Teams = sequelize.define('Teams', {
     guildId: {
         type: DataTypes.STRING,
         allowNull: false,
+    },
+    teamId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        primaryKey: true,
+        autoIncrement: true,
     },
     teamName: {
         type: DataTypes.STRING,

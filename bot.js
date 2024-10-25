@@ -246,7 +246,7 @@ const commands = [
     // //
 
     // TODO - Team Related
-    // ! Add Team?
+    // ! Add Team
     new SlashCommandBuilder()
         .setName('add-team')
         .setDescription('Add a team')
@@ -269,7 +269,7 @@ const commands = [
                 .setRequired(false)),
         
 
-    // ! Remvoe team
+    // ! Remove team
     new SlashCommandBuilder()
         .setName('remove-team')
         .setDescription('Remove a team')
@@ -304,6 +304,10 @@ const commands = [
             option.setName('team-leader')
                 .setDescription('The user whose profile you want to view')
                 .setRequired(false)),
+
+    // !  Add member to team
+
+    //  ! Remove member from team
 
     // //
 
@@ -375,7 +379,8 @@ client.on(Events.GuildCreate, async guild => {
         console.log(`Joined a new guild: ${guild.name} (ID: ${guild.id})`);
 
         const existingServer = await Server.findOne({ where: { serverId: guild.id } });
-        if (existingServer != process.env.SERVER_ID) {
+        if (existingServer != process.env.DEBUG_SERVER_ID || existingServer != process.env.SERVER_ID) {
+
             console.log(`Leaving guild: ${guild.name} (ID: ${guild.id})`);
             
             // Find a suitable channel to send the message
@@ -498,21 +503,19 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // //
     // ? Admin Commands
-
-    if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCommands.addTeams.execute(interaction); }
-    if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCommands.removeTeams.execute(interaction); }
-    if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCommands.editTeams.execute(interaction); }
-
+    // * Announcements
     if (commandName === 'announce') { console.log(`announce command ran`); await adminCommands.announce.execute(interaction); }
 
     // //
 
     // ? Config Commands
     // * Admin Configuration Commands - Setup, Edit, Remove Commands
-
-    if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await configCommands.setupRank.execute(interaction); }
-    if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await configCommands.editRank.execute(interaction); }
-    if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await configCommands.removeRank.execute(interaction); } 
+    if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCongifCommands.addTeams.execute(interaction); }
+    if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCongifCommands.removeTeams.execute(interaction); }
+    if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCongifCommands.editTeams.execute(interaction); }
+    if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await adminCongifCommands.setupRank.execute(interaction); }
+    if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await adminCongifCommands.editRank.execute(interaction); }
+    if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await adminCongifCommands.removeRank.execute(interaction); } 
 
     // * Community Configuration Commands - Setup, Edit, Remove Commands
     // ! Add Commands Here
@@ -531,6 +534,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // * Community Commands - Ranks
     // ! Add Commnads Here
+    if (commandName === 'profile') { console.log(`profile command ran`); await communityCommands.profile.execute(interaction); }
 
     // //
 });
