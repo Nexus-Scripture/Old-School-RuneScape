@@ -1,7 +1,9 @@
 const { User, Teams } = require('../../model/model.js');
+const { EmbedBuilder } = require('discord.js');
 
-async function executeLeaderboard(guild, channel) {
-    const serverId = guild.id;
+async function executeLeaderboard(interaction) {
+    const serverId = interaction.guild.id;
+    const channel = interaction.channel;
 
     try {
         // Fetch user data from the database using Sequelize
@@ -14,31 +16,31 @@ async function executeLeaderboard(guild, channel) {
         });
 
         if (!users || users.length === 0) {
-            return channel.send("No one has earned any points yet!");
+            return interaction.reply("No one has earned any points yet!");
         }
 
         // Fetch members and prepare leaderboard data
         const leaderboard = await Promise.all(users.map(async user => {
-            let member = guild.members.cache.get(user.userId);
+            let member = interaction.guild.members.cache.get(user.userId);
             if (!member) {
                 try {
-                    member = await guild.members.fetch(user.userId); // Fetch member if not cached
+                    member = await interaction.guild.members.fetch(user.userId); // Fetch member if not cached
                 } catch (error) {
                     console.error(`Failed to fetch member with ID: ${user.userId}`);
                     return null; // Skip users who can't be fetched
                 }
             }
-
+            
             return {
                 displayName: member ? member.displayName : "Unknown User",
-                xp: user.points
+                points: user.points
             };
         }));
 
         const validLeaderboard = leaderboard.filter(user => user !== null); // Remove null entries
 
         // Prepare fields for leaderboard
-        const usersField = validLeaderboard.map((user, index) => `${index + 1}. ${user.displayName} [Points ${user.points}]`).join('\n');
+        const usersField = validLeaderboard.map((user, index) => `${index + 1}. **${user.displayName}** - ${user.points}`).join('\n');
 
         // Create leaderboard embed
         const leaderboardEmbed = new EmbedBuilder()
@@ -49,11 +51,11 @@ async function executeLeaderboard(guild, channel) {
             )
             .setTimestamp();
 
-        await channel.send({ embeds: [leaderboardEmbed] });
+        await interaction.reply({ embeds: [leaderboardEmbed] });
 
     } catch (error) {
         console.error("Error fetching leaderboard:", error);
-        return channel.send("There was an error retrieving the leaderboard.");
+        return interaction.reply("There was an error retrieving the leaderboard.");
     }
 }
 

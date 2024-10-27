@@ -99,10 +99,9 @@ const Teams = sequelize.define('Teams', {
         allowNull: false,
     },
     teamId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
         allowNull: false,
         primaryKey: true,
-        autoIncrement: true,
     },
     teamName: {
         type: DataTypes.STRING,

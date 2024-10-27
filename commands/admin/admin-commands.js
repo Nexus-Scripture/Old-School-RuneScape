@@ -1,42 +1,66 @@
 const { EmbedBuilder } = require('discord.js');
 const { Teams, User, MilestoneLevels } = require('../../model/model.js');
+const { roleChecker } = require('../utils-functions/utils-handles.js');
+
+
 
 module.exports = {
     addPoints: {
         execute: async (interaction) => {
         try {
+            console.log('Starting addPoints execution');
             const points = interaction.options.getInteger('points');
-            const userMention = interaction.options.getString('user');
-            const userId = userMention.id;
+            const reason = interaction.options.getString('reason');
 
             const guildId = interaction.guild.id;
 
-            if (!points || !userId) {
-                return interaction.reply({ content: 'Please provide both points and user ID.', ephemeral: true });
+            if (!points) {
+                console.log('Missing points');
+                return interaction.reply({ content: 'Please provide points.', ephemeral: true });
             }
 
-            const user = await User.findOne({ where: { userId, guildId } });
-            if (!user) {
-                return interaction.reply({ content: 'User not found in the database.', ephemeral: true });
+            let user, team;
+
+            // Check if a user is mentioned
+            const userMention = interaction.options.getUser('user');
+            if (userMention) {
+                console.log('User Mentioned');
+                const userId = userMention.id;
+                user = await User.findOne({ where: { userId, guildId } });
+                if (!user) {
+                    console.log('User not found in the database');
+                    return interaction.reply({ content: 'User not found in the database.', ephemeral: true });
+                }
             }
 
             // Check if a team name is included
             const teamName = interaction.options.getString('team-name');
             if (teamName) {
-                const team = await Teams.findOne({ where: { teamName, guildId } });
+                console.log('Team Name Entered');
+                team = await Teams.findOne({ where: { teamName, guildId } });
                 if (!team) {
+                    console.log('Team not found in the database');
                     return interaction.reply({ content: 'Team not found in the database.', ephemeral: true });
                 }
-                // Add points to the team instead of the user
+            }
+
+            // Add points to the team or user
+            if (team) {
                 await team.increment('teamPoints', { by: points });
                 const embed = new EmbedBuilder()
                     .setColor(0xffd900)
                     .setTitle('Points Added to Team 🚀')
-                    .setDescription(`Successfully added ${points} points to the team ${teamName}.`)
+                    .setDescription(`Successfully added ${points} points to the team: ${teamName}.`)
+                    .addFields(
+                        { name: 'Points Received', value: `${points}`, inline: true },
+                        { name: 'Reason', value: reason || 'Points added by an administrator.', inline: true }
+                    )
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [embed] });
-            } else {
+            } else if (user) {
+                console.log('Add Points to User');
+                
                 const previousPoints = user.points;
                 await user.increment('points', { by: points });
 
@@ -50,7 +74,11 @@ module.exports = {
                 const embed = new EmbedBuilder()
                     .setColor(0xffd900)
                     .setTitle('Points Added 🎉')
-                    .setDescription(`Successfully added ${points} points to the user with ID ${userId}.`)
+                    .setDescription(`Successfully added ${points} points to ${user.displayName}.`)
+                    .addFields(
+                        { name: 'Points Received', value: `${points}`, inline: true },
+                        { name: 'Reason', value: reason || 'Points added by a administrator', inline: true }
+                    )
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [embed] });
@@ -66,7 +94,7 @@ module.exports = {
         execute: async (interaction) => {
         try {
             const points = interaction.options.getInteger('points');
-            const userMention = interaction.options.getString('user');
+            const userMention = interaction.options.getUser('user');
             const userId = userMention.id;
 
             const guildId = interaction.guild.id;

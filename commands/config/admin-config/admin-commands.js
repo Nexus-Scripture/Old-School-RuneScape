@@ -1,3 +1,6 @@
+const { EmbedBuilder } = require('discord.js');
+const { Teams, User } = require('../../../model/model');
+
 module.exports = {
     addTeams: {
         execute: async (interaction) => {
@@ -24,12 +27,12 @@ module.exports = {
                 // Add the team to the database with a unique team ID
                 await Teams.create({
                     guildId: interaction.guild.id,
+                    teamId: uniqueTeamId,
                     teamName,
                     teamDescription: teamDesc,
-                    teamPoints: 0,
                     teamLeader: ownerId,
+                    teamPoints: 0,
                     teamImage,
-                    teamId: uniqueTeamId // Save the unique team ID to the database
                 });
 
                 const embed = new EmbedBuilder()
@@ -153,7 +156,7 @@ module.exports = {
                     // Prompt the previous team leader to confirm the transfer
                     const confirmEmbed = new EmbedBuilder()
                         .setTitle('**Confirm Team Leadership Transfer**')
-                        .setDescription(`Do you want to transfer the leadership of team ${teamName} to ${teamLeader.username}?`)
+                        .setDescription(`Do you want to transfer the leadership of team ${teamName} to ${teamLeader.username}?\n\nSay "yes" to confirm or "no" to cancel`)
                         .setColor(0xFFFF00);
                     console.log('Sending confirmation prompt...');
                     await interaction.editReply({ embeds: [confirmEmbed] });
@@ -179,43 +182,64 @@ module.exports = {
                             .setTitle('**Leadership Transfer**')
                             .setDescription('Leadership transfer confirmed.')
                             .setColor(0x00FF00);
-                        return interaction.followUp({ embeds: [confirmEmbed] });
+                        await interaction.followUp({ embeds: [confirmEmbed] });
+
+                        // Update team leader after confirmation
+                        updateOptions.teamLeader = teamLeader.id;
+                        console.log('Updating team leader...');
+                        await Teams.update(updateOptions, { where: { teamName } });
+
+                        // Send team details updated message after new leader has been set
+                        console.log(`Team ${teamName} details updated.`);
+                        const embed = new EmbedBuilder()
+                            .setTitle('Team Details Updated 📝')
+                            .setDescription(`Details for team ${teamName} have been updated.`)
+                            .setColor(0x00FF00);
+
+                        // Show what was edited to the user in fields
+                        let fields = [];
+                        if (teamLeader) {
+                            fields.push({ name: '👑 Team Leader', value: teamLeader.username, inline: false });
+                        }
+                        if (teamDescription) {
+                            fields.push({ name: '📄 Team Description', value: teamDescription, inline: false });
+                        }
+                        if (teamImage) {
+                            fields.push({ name: '📸 Team Image', value: teamImage, inline: false });
+                        }
+                        if (newTeamName !== teamName) { // Check if new team name is different
+                            fields.push({ name: '🔄 Team Name', value: newTeamName, inline: false });
+                        }
+                        embed.addFields(fields);
+
+                        console.log('Sending updated team details...');
+                        await interaction.followUp({ embeds: [embed] });
                     }
                 } else if (!teamLeader) {
                     console.log('No team leader change detected.');
-                }
+                    // Send team details updated message without new leader
+                    console.log(`Team ${teamName} details updated.`);
+                    const embed = new EmbedBuilder()
+                        .setTitle('Team Details Updated 📝')
+                        .setDescription(`Details for team ${teamName} have been updated.`)
+                        .setColor(0x00FF00);
 
-                // Update team leader if necessary
-                if (teamLeader) {
-                    updateOptions.teamLeader = teamLeader.id;
-                    console.log('Updating team leader...');
-                    await Teams.update(updateOptions, { where: { teamName } });
-                }
+                    // Show what was edited to the user in fields
+                    let fields = [];
+                    if (teamDescription) {
+                        fields.push({ name: '📄 Team Description', value: teamDescription, inline: false });
+                    }
+                    if (teamImage) {
+                        fields.push({ name: '📸 Team Image', value: teamImage, inline: false });
+                    }
+                    if (newTeamName !== teamName) { // Check if new team name is different
+                        fields.push({ name: '🔄 Team Name', value: newTeamName, inline: false });
+                    }
+                    embed.addFields(fields);
 
-                console.log(`Team ${teamName} details updated.`);
-                const embed = new EmbedBuilder()
-                    .setTitle('Team Details Updated 📝')
-                    .setDescription(`Details for team ${teamName} have been updated.`)
-                    .setColor(0x00FF00);
-
-                // Show what was edited to the user in fields
-                let fields = [];
-                if (teamLeader) {
-                    fields.push({ name: '👑 Team Leader', value: teamLeader.username, inline: false });
+                    console.log('Sending updated team details...');
+                    await interaction.followUp({ embeds: [embed] });
                 }
-                if (teamDescription) {
-                    fields.push({ name: '📄 Team Description', value: teamDescription, inline: false });
-                }
-                if (teamImage) {
-                    fields.push({ name: '📸 Team Image', value: teamImage, inline: false });
-                }
-                if (newTeamName !== teamName) { // Check if new team name is different
-                    fields.push({ name: '🔄 Team Name', value: newTeamName, inline: false });
-                }
-                embed.addFields(fields);
-
-                console.log('Sending updated team details...');
-                interaction.editReply({ embeds: [embed] });
             } catch (error) {
                 console.error('Error updating team details:', error);
                 const embed = new EmbedBuilder()

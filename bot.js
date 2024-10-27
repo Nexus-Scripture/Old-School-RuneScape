@@ -166,10 +166,14 @@ const commands = [
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('User to add points to')
-                .setRequired(true))
+                .setRequired(false))
         .addStringOption(option =>
             option.setName('team-name')
                 .setDescription('Name of the team')
+                .setRequired(false))
+        .addStringOption(option =>
+            option.setName('reason')
+                .setDescription('Reason for adding points')
                 .setRequired(false)),
     
     // ! Remove Points 
@@ -187,6 +191,10 @@ const commands = [
         .addStringOption(option =>
             option.setName('team-name')
                 .setDescription('Name of the team')
+                .setRequired(false))
+        .addStringOption(option =>
+            option.setName('reason')
+                .setDescription('Reason for adding points')
                 .setRequired(false)),
 
     // //
@@ -202,18 +210,13 @@ const commands = [
         .setName('team-leaderboard')
         .setDescription('Show the team leaderboard')
         .addStringOption(option =>
-            option.setName('team-name')
-                .setDescription('Name of the team')
-                .setRequired(true)),
-
-    // ! Team Points
-    new SlashCommandBuilder()
-        .setName('team-points')
-        .setDescription('Show the team points')
-        .addStringOption(option =>
-            option.setName('team-name')
-                .setDescription('Name of the team')
-                .setRequired(true)),
+            option.setName('sort-by')
+                .setDescription('Sort the leaderboard by')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Most Points', value: 'points' },
+                    { name: 'Most Members', value: 'members' }
+                )),
 
     // //
 
@@ -241,6 +244,12 @@ const commands = [
     new SlashCommandBuilder()
         .setName('view-teams')
         .setDescription('View all teams')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.VIEW_CHANNEL),
+
+    // ! View Ranks
+    new SlashCommandBuilder()
+        .setName('view-ranks')
+        .setDescription('View all ranks')
         .setDefaultMemberPermissions(PermissionsBitField.Flags.VIEW_CHANNEL),
 
     // //
@@ -304,10 +313,74 @@ const commands = [
             option.setName('team-leader')
                 .setDescription('The user whose profile you want to view')
                 .setRequired(false)),
+    
+    // //
 
-    // !  Add member to team
+    // !  Join team
+    new SlashCommandBuilder()
+        .setName('join-team')
+        .setDescription('Join a team')
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team to join')
+                .setRequired(true))
+        .addUserOption(option =>
+            option.setName('team-leader')
+                .setDescription('The leader of the team')
+                .setRequired(false)),
+    
+    // ! Admin Force Join Team
+    new SlashCommandBuilder()
+        .setName('admin-force-join-team')
+        .setDescription('Force a user to join a team')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true))
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('The user to force join the team')
+                .setRequired(true)),
 
-    //  ! Remove member from team
+    // //
+
+    //  ! Leave team
+    new SlashCommandBuilder()
+        .setName('leave-team')
+        .setDescription('Leave a team')
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team to leave')
+                .setRequired(true)),
+    
+    // ! Admin Force Leave Team
+    new SlashCommandBuilder()
+        .setName('admin-force-leave-team')
+        .setDescription('Force a user to leave a team')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true))
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('The user to force leave the team')
+                .setRequired(true)),
+    
+    // ! Team Leader Kick Member
+    new SlashCommandBuilder()
+        .setName('team-leader-kick-member')
+        .setDescription('Kick a member from a team')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageGuild)
+        .addStringOption(option =>
+            option.setName('team-name')
+                .setDescription('Name of the team')
+                .setRequired(true))
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('The user to kick from the team')
+                .setRequired(true)),
 
     // //
 
@@ -504,6 +577,8 @@ client.on(Events.InteractionCreate, async interaction => {
     // //
     // ? Admin Commands
     // * Announcements
+    if (commandName === 'add-points') { console.log(`add-points command ran`); await adminCommands.addPoints.execute(interaction); }
+    if (commandName === 'remove-points') { console.log(`remove-points command ran`); await adminCommands.removePoints.execute(interaction); }
     if (commandName === 'announce') { console.log(`announce command ran`); await adminCommands.announce.execute(interaction); }
 
     // //
@@ -535,11 +610,16 @@ client.on(Events.InteractionCreate, async interaction => {
     // * Community Commands - Ranks
     // ! Add Commnads Here
     if (commandName === 'profile') { console.log(`profile command ran`); await communityCommands.profile.execute(interaction); }
-
+    if (commandName === 'view-ranks') { console.log(`view-ranks command ran`); await communityCommands.viewRanks.execute(interaction); }
     // //
 });
 
 // //
 
 setInterval(() => processLogs(client), 1000 * 60 * 5);  // * Process logs every 5 minutes
-client.login(process.env.TEST_TOKEN);
+
+try {
+    client.login(process.env.TEST_TOKEN);
+} catch (error) {
+    console.error("Failed to login with the provided token:", error);
+}
