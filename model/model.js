@@ -83,7 +83,11 @@ const MilestoneLevels = sequelize.define('MilestoneLevels', {
     description: {
         type: DataTypes.STRING,
         allowNull: false,
-    }
+    },
+    roleId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
 }, {
     // Composite unique constraint
     uniqueKeys: {

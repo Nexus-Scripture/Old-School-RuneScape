@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { User, Teams, MilestoneLevels } = require('../../model/model.js');
 const {
     roleChecker
@@ -71,14 +71,14 @@ module.exports = {
                 const teams = await Teams.findAll({ where: { guildId: interaction.guild.id } });
                 if (teams.length === 0) {
                     const embed = new EmbedBuilder()
-                        .setTitle('View Teams')
+                        .setTitle('🚀 View Teams')
                         .setDescription('No teams found in the database.')
                         .setColor(0x9B59B6);
                     await interaction.reply({ embeds: [embed] });
                     return;
                 }
     
-                const perPage = 11; // Number of teams per page
+                const perPage = 9; // Number of teams per page
     
                 // Function to create the embed
                 const createEmbed = (page) => {
@@ -94,7 +94,7 @@ module.exports = {
                     });
     
                     const embed = new EmbedBuilder()
-                        .setTitle(`View Teams (Page ${page + 1})`)
+                        .setTitle(`🚀 View Teams (Page ${page + 1})`)
                         .setColor(0x9B59B6);
                     
                     // Add fields to the embed
@@ -352,5 +352,66 @@ module.exports = {
                 await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
             }
         }
-    }
+    },
+
+    // //
+
+    help: {
+        execute: async (interaction) => {
+            try {
+                const options = [
+                    {
+                        label: 'Admin Commands',
+                        description: 'Commands for managing server settings',
+                        value: 'admin_commands',
+                    },
+                    {
+                        label: 'Community Commands',
+                        description: 'Commands for community interactions',
+                        value: 'community_commands',
+                    },
+                    {
+                        label: 'Configuration Commands',
+                        description: 'Commands for configuring the bot',
+                        value: 'configuration_commands',
+                    },
+                    {
+                        label: 'Help With Commands',
+                        description: 'Help with commands for the bot',
+                        value: 'command_help',
+                    }
+                ];
+        
+                // Check if the user is the owner and add the Owner Commands option
+                if (interaction.member.id === process.env.OWNER) {
+                    options.push({
+                        label: 'Owner Commands',
+                        description: 'Commands only available to the bot owner',
+                        value: 'owner_commands',
+                    });
+                }
+        
+                // Create the select menu and action row
+                const row = new ActionRowBuilder()
+                    .addComponents(
+                        new StringSelectMenuBuilder()
+                            .setCustomId('help_menu')
+                            .setPlaceholder('Select a category')
+                            .addOptions(options),
+                    );
+        
+                // Create the initial embed
+                const optionEmbed = new EmbedBuilder()
+                    .setColor(0x3498db)
+                    .setTitle("Help")
+                    .setDescription("Choose an option below to see commands");
+            
+                // Reply with the embed and select menu
+                await interaction.reply({ embeds: [optionEmbed], components: [row] });
+            } catch (error) {
+                console.error('An error occurred while creating the help embed:', error);
+                interaction.reply({ content: 'An error occurred while generating the help message. Please contact the admin. **Error code: 0hb**', ephemeral: true });
+            }
+        }
+    },
 }

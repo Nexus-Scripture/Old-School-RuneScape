@@ -75,7 +75,7 @@ const commands = [
     // TODO - Setup Rank
     // * Setup Ranks for server - Role Managers > to use this command
     new SlashCommandBuilder()
-        .setName('setup-ranks')
+        .setName('add-rank')
         .setDescription('Setup Ranks for users')
         .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageRoles)
         .addStringOption(option =>
@@ -384,6 +384,11 @@ const commands = [
 
     // //
 
+    // ! Help
+    new SlashCommandBuilder()
+        .setName('help')
+        .setDescription('Display help information for commands')
+
 ].map(command => command.toJSON());
 
 // // 
@@ -572,7 +577,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // ? Help Commands
     // * Help Menu
-    if (commandName === 'help') { console.log(`help command ran`); await helpMenuCommands.help.execute(interaction); }
+    if (commandName === 'help') { console.log(`help command ran`); await communityCommands.help.execute(interaction); }
 
     // //
     // ? Admin Commands
@@ -588,7 +593,8 @@ client.on(Events.InteractionCreate, async interaction => {
     if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCongifCommands.addTeams.execute(interaction); }
     if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCongifCommands.removeTeams.execute(interaction); }
     if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCongifCommands.editTeams.execute(interaction); }
-    if (commandName === 'setup-rank') { console.log(`setup-rank command ran`); await adminCongifCommands.setupRank.execute(interaction); }
+    // //
+    if (commandName === 'add-rank') { console.log(`add-rank command ran`); await adminCongifCommands.addRank.execute(interaction); }
     if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await adminCongifCommands.editRank.execute(interaction); }
     if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await adminCongifCommands.removeRank.execute(interaction); } 
 
@@ -611,7 +617,11 @@ client.on(Events.InteractionCreate, async interaction => {
     // ! Add Commnads Here
     if (commandName === 'profile') { console.log(`profile command ran`); await communityCommands.profile.execute(interaction); }
     if (commandName === 'view-ranks') { console.log(`view-ranks command ran`); await communityCommands.viewRanks.execute(interaction); }
+    
     // //
+
+    // * Help Menu Interaction
+    if (interaction.customId === 'help_menu') { await helpMenuCommands.help_menu_selected.execute(interaction) }
 });
 
 // //

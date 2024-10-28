@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { Teams, User } = require('../../../model/model');
+const { Teams, User, MilestoneLevels } = require('../../../model/model');
 
 module.exports = {
     addTeams: {
@@ -247,6 +247,160 @@ module.exports = {
                     .setDescription('There was an error updating the team details.')
                     .setColor(0xFF0000);
                 interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+        }
+    },
+
+    addRank: {
+        execute: async (interaction) => {
+            try {
+                console.log('Executing addRank command...');
+                const name = interaction.options.getString('role-name');
+                const rankPoints = interaction.options.getInteger('required-points');
+                const rankDescription = interaction.options.getString('description');
+                const durationDays = interaction.options.getInteger('required-days');
+
+                console.log('Checking command options...');
+                if (!name || !rankPoints || !durationDays) {
+                    const embed = new EmbedBuilder()
+                        .setColor(0xFF0000)
+                        .setTitle('Error Adding Rank')
+                        .setDescription('Please provide rank name, points, and duration days.')
+                        .setTimestamp();
+                    return interaction.reply({ embeds: [embed], ephemeral: true });
+                }
+
+                console.log('Getting guild ID...');
+                const guildId = interaction.guild.id;
+
+                console.log('Checking if role exists...');
+                let role = interaction.guild.roles.cache.find(role => role.name === name);
+                if (!role) {
+                    console.log('Creating new role...');
+                    role = await interaction.guild.roles.create({
+                        name
+                    });
+                }
+
+                console.log('Checking if rank already exists...');
+                const existingRank = await MilestoneLevels.findOne({ where: { name, guildId } });
+                if (existingRank) {
+                    const embed = new EmbedBuilder()
+                        .setColor(0xFF0000)
+                        .setTitle('Error Adding Rank')
+                        .setDescription('Rank already exists in the database.')
+                        .setTimestamp();
+                    return interaction.reply({ embeds: [embed], ephemeral: true });
+                }
+
+                console.log('Adding new rank to database...');
+                await MilestoneLevels.create({
+                    guildId,
+                    name,
+                    points: rankPoints,
+                    durationDays: durationDays,
+                    description: rankDescription,
+                    roleId: role ? role.id : null
+                });
+
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('Rank Added ✅')
+                    .setDescription(`Successfully added rank ${name} with ${rankPoints} points and ${durationDays} days duration.`)
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [embed] });
+            } catch (error) {
+                console.error('Error adding rank:', error);
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('Error Adding Rank')
+                    .setDescription('There was an error adding rank. Please try again later.')
+                    .setTimestamp();
+                await interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+        }
+    },
+
+    removeRank: {
+        execute: async (interaction) => {
+            try {
+                const rankName = interaction.options.getString('rank-name');
+
+                if (!rankName) {
+                    return interaction.reply({ content: 'Please provide the rank name.', ephemeral: true });
+                }
+
+                const guildId = interaction.guild.id;
+
+                const existingRank = await MilestoneLevels.findOne({ where: { rankName, guildId } });
+                if (!existingRank) {
+                    return interaction.reply({ content: 'Rank not found in the database.', ephemoral: true });
+                }
+
+                const role = interaction.guild.roles.cache.get(existingRank.roleId);
+                if (role) {
+                    await role.delete();
+                }
+
+                await existingRank.destroy();
+
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('Rank Removed ❌')
+                    .setDescription(`Successfully removed rank ${rankName}.`)
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [embed] });
+            } catch (error) {
+                console.error('Error removing rank:', error);
+                await interaction.reply({ content: 'There was an error removing rank. Please try again later.', ephemeral: true });
+            }
+        }
+    },
+
+    editRank: {
+        execute: async (interaction) => {
+            try {
+                const rankName = interaction.options.getString('rank-name');
+                const newRankName = interaction.options.getString('new-rank-name');
+                const newRankPoints = interaction.options.getInteger('new-rank-points');
+
+                if (!rankName || (!newRankName && !newRankPoints)) {
+                    return interaction.reply({ content: 'Please provide the rank name and either the new rank name or the new rank points.', ephemeral: true });
+                }
+
+                const guildId = interaction.guild.id;
+
+                const existingRank = await MilestoneLevels.findOne({ where: { rankName, guildId } });
+                if (!existingRank) {
+                    return interaction.reply({ content: 'Rank not found in the database.', ephemeral: true });
+                }
+
+                if (newRankName) {
+                    existingRank.rankName = newRankName;
+                }
+                if (newRankPoints) {
+                    existingRank.rankPoints = newRankPoints;
+                }
+
+                const role = interaction.guild.roles.cache.get(existingRank.roleId);
+                if (role) {
+                    role.setName(newRankName);
+                }
+
+                await existingRank.save();
+
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('Rank Edited ✅')
+                    .setDescription(`Successfully edited rank ${rankName}.`)
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [embed] });
+            } catch (error) {
+                console.error('Error editing rank:', error);
+                await interaction.reply({ content: 'There was an error editing rank. Please try again later.', ephemeral: true });
             }
         }
     },
