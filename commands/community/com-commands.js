@@ -245,14 +245,20 @@ module.exports = {
     profile: {
         execute: async (interaction) => {
             try {
+                console.log("Executing profile command...");
                 const targetUser = interaction.options.getUser('user') || interaction.user;
+                console.log("Target User:", targetUser);
                 const guildId = interaction.guild.id;
+                console.log("Guild ID:", guildId);
                 const userId = targetUser.id;
+                console.log("User ID:", userId);
                 let userPoints, userTeam, userRoles, milestoneLevels, userRanks, profilePicture, leadingTeams;
 
                 // Check if the user exists in the database
                 let userExists = await User.findOne({ where: { userId, guildId } });
+                console.log("User Exists:", userExists);
                 if (!userExists) {
+                    console.log("User does not exist in the database. Creating new entry...");
                     // If the user doesn't exist, create a new entry for them with default values
                     await User.create({
                         userId,
@@ -262,47 +268,41 @@ module.exports = {
                         teamId: null,
                         days: 0,
                     });
+                    console.log("New user entry created.");
                 }
 
                 // Fetch user data from the database
                 userPoints = await User.findOne({ where: { userId, guildId } }).then(user => user.points).catch(console.error);
+                console.log("User Points:", userPoints);
                 userTeam = await Teams.findOne({ where: { teamLeader: userId } }).then(team => team ? team.teamName : 'None').catch(console.error);
+                console.log("User Team:", userTeam);
                 userRoles = interaction.member.roles.cache.map(role => role.id);
+                console.log("User Roles:", userRoles);
                 milestoneLevels = await MilestoneLevels.findAll({ where: { guildId } });
-                userRanks = await roleChecker(userRoles, milestoneLevels).catch(console.error);
+                console.log("Milestone Levels:", milestoneLevels);
+                userRanks = await User.findOne({ where: { userId, guildId } }).then(user => user.ranks ? user.ranks.split(',').map(rank => rank.trim()) : []).catch(console.error); 
+                console.log("User Ranks:", userRanks);
                 profilePicture = targetUser.displayAvatarURL({ dynamic: true, size: 1024 });
+                console.log("Profile Picture:", profilePicture);
 
                 // Fetch teams led by the user
                 leadingTeams = await Teams.findAll({ where: { teamLeader: userId } }).then(teams => teams.map(team => team.teamName)).catch(console.error);
-
-                let color = 0x0099ff; // Default color
-                if (userRanks.includes('Master')) {
-                    color = 0xff0000; // Red for Master rank
-                } else if (userRanks.includes('Dragon')) {
-                    color = 0x9900ff; // Purple for Dragon rank
-                } else if (userRanks.includes('Monarch')) {
-                    color = 0x9900ff; // Purple for Monarch rank
-                } else if (userRanks.includes('Paladin')) {
-                    color = 0x00ff00; // Green for Paladin rank
-                } else if (userRanks.includes('Templar')) {
-                    color = 0x00ff00; // Green for Templar rank
-                } else if (userRanks.includes('Berserker')) {
-                    color = 0xff9900; // Orange for Berserker rank
-                } else if (userRanks.includes('Barbarian')) {
-                    color = 0xff9900; // Orange for Barbarian rank
-                } else if (userRanks.includes('Warrior')) {
-                    color = 0xff9900; // Orange for Warrior rank
-                } else if (userRanks.includes('Fighter')) {
-                    color = 0xffff00; // Yellow for Fighter rank
-                } else if (userRanks.includes('Bruiser')) {
-                    color = 0xffff00; // Yellow for Bruiser rank    
-                } else if (userRanks.includes('Scourge')) {
-                    color = 0xffff00; // Yellow for Scourge rank
-                } else if (userRanks.includes('Brawler')) {
-                    color = 0x00ffff; // Cyan for Brawler rank
-                } else if (userRanks.includes('Goon')) {
-                    color = 0x00ffff; // Cyan for Goon rank
+                console.log("Leading Teams:", leadingTeams);
+                // Update colors based on points
+                if (userPoints >= 10000) {
+                    color = 0xff0000; // Red 
+                } else if (userPoints >= 5000) {
+                    color = 0x9900ff; // Purple 
+                } else if (userPoints >= 1000) {
+                    color = 0x00ff00; // Green 
+                } else if (userPoints >= 500) {
+                    color = 0xffff00; // Yellow 
+                } else if (userPoints >= 100) {
+                    color = 0x00ffff; // Cyan 
+                } else {
+                    color = 0x0000ff; // Blue 
                 }
+                console.log("Color:", color);
 
                 const embed = new EmbedBuilder()
                     .setTitle(`${targetUser.displayName}'s Profile 📜`)
@@ -310,10 +310,17 @@ module.exports = {
                     .setColor(color)
                     .addFields(
                         { 
-                            name: 'Ranks 🏆', value: userRanks.length > 0 ? `:medal: ${userRanks.join(', ')}` : ':medal: None', inline: true,
                             name: 'Points 💰', value: `${userPoints}`, inline: true, 
                         },
                     );
+
+                // Display ranks only if the user has any ranks
+                if (userRanks.length > 0) {
+                    const rankValues = userRanks.map(rank => `<@&${rank}>`).join(', ');
+                    embed.addFields(
+                        { name: 'Ranks 🏆', value: rankValues, inline: true },
+                    );
+                }
 
                 // Display team status only if the user is in a team
                 if (userTeam !== 'None') {
@@ -328,7 +335,6 @@ module.exports = {
                         { name: 'Leading Teams 👑', value: leadingTeams.join(', '), inline: false },
                     );
                 }
-
 
                 // Randomly select a tip for the footer
                 const tips = [

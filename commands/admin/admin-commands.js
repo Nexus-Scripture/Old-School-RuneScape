@@ -28,9 +28,9 @@ module.exports = {
                 const user = await User.findOne({ where: { userId, guildId } });
                 console.log("User :", user);
                 if (!user) {
-                    console.log("User  not found in the database.");
+                    console.log("User not found in the database.");
                     return interaction.reply({
-                        content: "User  not found in the database.",
+                        content: "User not found in the database.",
                         ephemeral: true,
                     });
                 }
@@ -107,9 +107,9 @@ module.exports = {
                                     if (!member.roles.cache.has(role.id)) {
                                         await member.roles.add(role); // Use member.roles.add
                                         console.log(`Assigned role ${role.name} to ${userMention.displayName}`);
+                                        console.log(`Inserting ${rank.id} into database`);
                             
-                                        // Update the user's rank in the database if necessary
-                                        await user.update({ rankId: rank.id });
+                                        await user.update({ ranks: role.id }, { where: { userId } });
                             
                                         // Add rank unlocked field to the embed
                                         embed.addFields({
@@ -146,78 +146,71 @@ module.exports = {
         execute: async (interaction) => {
             try {
                 const points = interaction.options.getInteger("points");
-                const userMention = interaction.options.getUser ("user");
+                const userMention = interaction.options.getUser("user");
                 const userId = userMention.id;
                 const guildId = interaction.guild.id;
-    
+
                 if (!points || !userId) {
                     return interaction.reply({
                         content: "Please provide both points and user ID.",
                         ephemeral: true,
                     });
                 }
-    
+
                 const user = await User.findOne({ where: { userId, guildId } });
                 if (!user) {
                     return interaction.reply({
-                        content: "User  not found in the database.",
+                        content: "User not found in the database.",
                         ephemeral: true,
                     });
                 }
-    
-                // Remove points from the user
-                await user.decrement("points", { by: points });
-    
+
+                // Ensure the user's points do not go below 0
+                const newPoints = Math.max(0, user.points - points);
+                await user.update({ points: newPoints });
+
                 const embed = new EmbedBuilder()
                     .setColor(0xffd900)
                     .setTitle("Points Removed 🚫")
                     .setDescription(`Successfully removed ${points} points from ${userMention.displayName}.`)
                     .setTimestamp();
-    
+
                 await interaction.reply({ embeds: [embed] });
-    
-                // Check if the user has gone below the required points and remove rank role from them
-                const milestoneLevels = await MilestoneLevels.findAll({
-                    where: { guildId },
-                });
-    
-                // Check current user rank
-                const currentRank = await roleChecker(
-                    interaction.member.roles.cache.map((role) => role.id),
-                    milestoneLevels
-                );
-    
-                // Determine if the user needs to lose their rank
-                if (currentRank.length > 0 && user.points < milestoneLevels[milestoneLevels.length - 1].points) {
-                    // Remove the rank from the user
-                    const rankToRemove = await interaction.guild.roles.cache.get(milestoneLevels[milestoneLevels.length - 1].roleId);
-                    if (rankToRemove) {
+
+                // Check if the user needs to lose their rank
+                const currentRankId = user.rankId; // Assuming user.rankId holds the current rank ID
+                if (currentRankId) {
+                    const rankRole = await interaction.guild.roles.fetch(currentRankId);
+                    const requiredPoints = rankRole.requiredPoints; // Assuming the role has a property for required points
+
+                    // Check if the user's points are below the required points for their current rank
+                    if (user.points < requiredPoints) {
                         const member = await interaction.guild.members.fetch(userId);
-                        await member.roles.remove(rankToRemove.id);
-                        console.log(`User  ${userMention.displayName} has been removed from the rank: ${rankToRemove.name}`);
-    
+                        await member.roles.remove(rankRole.id);
+                        console.log(`User ${userMention.displayName} has been removed from the rank: ${rankRole.name}`);
+
                         // Update the user's rank in the database
-                        await user.update({ ranks: "" }); // Clear the ranks field or set it to a new value if needed
-    
+                        await user.update({ rankId: null }); // Clear the rankId field
+
                         // Send an embed message to the user
                         const rankEmbed = new EmbedBuilder()
                             .setColor(0xffd900)
                             .setTitle("Rank Removed 🚫")
-                            .setDescription(`You have been removed from the rank: ${rankToRemove.name} due to insufficient points.`)
+                            .setDescription(`You have been removed from the rank: ${rankRole.name} due to insufficient points.`)
                             .addFields(
                                 {
                                     name: "Rank Name",
-                                    value: rankToRemove.name,
+                                    value: rankRole.name,
                                     inline: true,
                                 },
                                 {
-                                    name: "Rank Description",
-                                    value: milestoneLevels[milestoneLevels.length - 1].description,
+                                    name: "Required Points",
+                                    value: requiredPoints.toString(),
                                     inline: true,
                                 }
                             )
                             .setTimestamp();
-    
+
                         await interaction.followUp({ embeds: [rankEmbed] });
                     }
                 }
