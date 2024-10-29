@@ -321,18 +321,23 @@ module.exports = {
                     .setThumbnail(profilePicture)
                     .setColor(color)
                     .addFields(
-                        { 
-                            name: 'Points 💰', value: `${userPoints}`, inline: true, 
-                        },
+                        { name: 'Points 💰', value: `${userPoints}`, inline: true, },
+                        { name: 'Days 📅', value: `${userDays}`, inline: true, },
                     );
 
                 // Display ranks only if the user has any ranks
                 if (userRanks.length > 0) {
                     const rankValues = userRanks.map(rank => `<@&${rank}>`).join(', ');
                     embed.addFields(
+                        { name: '\u200B', value: '\u200B', inline: true },
                         { name: 'Ranks 🏆', value: rankValues, inline: true },
+                        { name: '\u200B', value: '\u200B', inline: true },
+                        { name: '\u200B', value: '\u200B', inline: true },
                     );
                 }
+
+                // Display Days 
+
 
                 // Display team status only if the user is in a team
                 if (userTeam !== 'None') {
@@ -344,7 +349,7 @@ module.exports = {
                 // Display leading teams if the user is a team leader of any team
                 if (leadingTeams.length > 0) {
                     embed.addFields(
-                        { name: 'Leading Teams 👑', value: leadingTeams.join(', '), inline: false },
+                        { name: 'Leading Teams 👑', value: leadingTeams.join(', '), inline: true },
                     );
                 }
 
