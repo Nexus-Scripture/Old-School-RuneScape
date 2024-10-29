@@ -278,14 +278,22 @@ module.exports = {
                 // Fetch user data from the database
                 userPoints = await User.findOne({ where: { userId, guildId } }).then(user => user.points).catch(console.error);
                 console.log("User Points:", userPoints);
+                // //
                 userTeam = await Teams.findOne({ where: { teamLeader: userId } }).then(team => team ? team.teamName : 'None').catch(console.error);
                 console.log("User Team:", userTeam);
+                // //
                 userRoles = interaction.member.roles.cache.map(role => role.id);
                 console.log("User Roles:", userRoles);
+                // //
+                userDays = await User.findOne({ where: { userId, guildId } }).then(user => user.days).catch(console.error);
+                console.log("User Days:", userDays);
+                // //
                 milestoneLevels = await MilestoneLevels.findAll({ where: { guildId } });
                 console.log("Milestone Levels:", milestoneLevels);
+                // //
                 userRanks = await User.findOne({ where: { userId, guildId } }).then(user => user.ranks ? user.ranks.split(',').map(rank => rank.trim()) : []).catch(console.error); 
                 console.log("User Ranks:", userRanks);
+                // //
                 profilePicture = targetUser.displayAvatarURL({ dynamic: true, size: 1024 });
                 console.log("Profile Picture:", profilePicture);
 

@@ -678,12 +678,18 @@ client.on(Events.InteractionCreate, async interaction => {
 // //
 
 const wholeFiveMins = 1000 * 60 * 5;
-const wholeDay = 1000 * 60 * 60 * 24;
+const wholeTenMins = 1000 * 60 * 10;
+const wholeThirtyMins = wholeTenMins * 3;
+// //
+const wholeHour = 1000 * 60 * 60;
+const wholeFiveHours = wholeHour * 5;
+// //
+const wholeDay = wholeHour * 24;
 const wholeWeek = wholeDay * 7;
 const wholeMonth = wholeDay * 30;
 
 
-setInterval(() => processLogs(client), 1000 * 60 * 5);  // * Process logs every 5 minutes
+setInterval(() => processLogs(client), wholeFiveMins);
 setInterval(() => updateUser_Days(client), 5000);
 
 // //

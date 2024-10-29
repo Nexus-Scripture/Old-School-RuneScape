@@ -1,5 +1,4 @@
-// utils/dailyTicker.js
-
+const { EmbedBuilder } = require('discord.js');
 const { User, MilestoneLevels } = require('../../model/model.js'); // Adjust the path as necessary
 const { Op } = require('sequelize'); // Make sure to import Op if you're using Sequelize operators
 
@@ -45,6 +44,19 @@ const assignRankRole = async (user, days, client) => {
             if (role && !member.roles.cache.has(role.id)) {
                 await member.roles.add(role); // Assign the role
                 console.log(`Assigned role ${role.name} to user ${user.userId}`);
+
+                // Add role id to User table
+                await user.update({ ranks: role.id });
+
+                // Embed message showing they achieved the role
+                const embed = new EmbedBuilder()
+                    .setColor('#00ff00')
+                    .setTitle('Rank Achievement!')
+                    .setDescription(`Congratulations <@${user.userId}>, you have achieved the rank of ${role.name}!`)
+                    .setTimestamp();
+                
+                return embed;
+
             }
         }
     }
