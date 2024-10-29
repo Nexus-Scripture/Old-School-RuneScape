@@ -48,7 +48,7 @@ const { logEvent, processLogs } = require('./events/logEvents.js');
 // ! Import utils if needed
 const {  } = require('./commands/utils-functions/utils-handles.js');
 const {  } = require('./commands/utils-functions/utils-rank.js');
-// const {  } = require('./commands/utils-functions/');
+const { updateUser_Days } = require('./commands/utils-functions/utils-dailyTicker.js');
 // const {  } = require('./commands/utils-functions/');
 
 
@@ -56,10 +56,10 @@ const {  } = require('./commands/utils-functions/utils-rank.js');
 
 // ! Import command logic 
 const adminCommands = require('./commands/admin/admin-commands.js');
-const adminCongifCommands = require('./commands/config/admin-config/admin-commands.js')
+const adminCongifCommands = require('./commands/config/admin-config/config-admin-commands.js')
 const communityCommands = require('./commands/community/com-commands.js');
 const helpMenuCommands = require('./commands/help/help-commands.js');
-const configCommands = require('./commands/config/log-config/logging-commands.js');
+const configCommands = require('./commands/config/log-config/config-logging-commands.js');
 
 // //
 
@@ -114,6 +114,10 @@ const commands = [
             option.setName('role-name')
                 .setDescription('Name of the role to edit')
                 .setRequired(true))
+        .addStringOption(option =>
+            option.setName('new-role-name')
+                .setDescription('New name of the role')
+                .setRequired(false))
         .addIntegerOption(option =>
             option.setName('required-points')
                 .setDescription('Points required for the role')
@@ -449,6 +453,43 @@ client.once('ready', async () => {
     }
 });
 
+client.on('ready', async () => {
+    // Fetch all members from all guilds the bot is in
+    const guilds = client.guilds.cache;
+    
+    for (const guild of guilds.values()) {
+        try {
+            // Fetch all members
+            const members = await guild.members.fetch();
+
+            for (const member of members.values()) {
+                if (member.user.bot) {
+                    console.log(`Skipping bot ${member.user.username}`);
+                    continue; // Skip to the next member
+                }
+
+                // Check if the member is already in the database
+                const existingUser  = await User.findOne({ where: { userId: member.id, guildId: guild.id } });
+                
+                if (!existingUser) {
+                    // Add the member to the database
+                    await User.create({
+                        userId: member.id,
+                        username: member.user.username,
+                        guildId: guild.id,
+                        days: 0,
+                        points: 0,
+                        joinDate: new Date(), // Set the join date to now or use the member's join date
+                    });
+                    console.log(`Added user ${member.user.username} to the database.`);
+                }
+            }
+        } catch (error) {
+            console.error(`Error fetching members for guild ${guild.id}:`, error);
+        }
+    }
+});
+
 // //
 
 // ! Bot Joins Server = Check if server ID match, if not leave.
@@ -614,10 +655,20 @@ client.on(Events.InteractionCreate, async interaction => {
     // //
 
     // * Community Commands - Ranks
-    // ! Add Commnads Here
     if (commandName === 'profile') { console.log(`profile command ran`); await communityCommands.profile.execute(interaction); }
     if (commandName === 'view-ranks') { console.log(`view-ranks command ran`); await communityCommands.viewRanks.execute(interaction); }
     
+    // //
+
+    //  * Community Commands - Join, Leave Teams
+
+    if (commandName === 'join-team') { console.log(`join-team command ran`); await communityCommands.joinTeam.execute(interaction); }
+    if (commandName === 'leave-team') { console.log(`leave-team command ran`); await communityCommands.leaveTeam.execute(interaction); }
+    // //
+    if (commandName === 'admin-force-join-team') { console.log(`force-join command ran`); await adminCommands.forceJoin.execute(interaction); }
+    if (commandName === 'admin-force-leave-team') { console.log(`force-leave command ran`); await adminCommands.forceLeave.execute(interaction); }
+    if (commandName === 'team-leader-kick-member') { console.log(`team-leader-kick-member command ran`); await adminCommands.teamLeaderKickMember.execute(interaction); }
+
     // //
 
     // * Help Menu Interaction
@@ -626,7 +677,16 @@ client.on(Events.InteractionCreate, async interaction => {
 
 // //
 
+const wholeFiveMins = 1000 * 60 * 5;
+const wholeDay = 1000 * 60 * 60 * 24;
+const wholeWeek = wholeDay * 7;
+const wholeMonth = wholeDay * 30;
+
+
 setInterval(() => processLogs(client), 1000 * 60 * 5);  // * Process logs every 5 minutes
+setInterval(() => updateUser_Days(client), 5000);
+
+// //
 
 try {
     client.login(process.env.TEST_TOKEN);

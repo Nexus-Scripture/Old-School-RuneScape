@@ -31,6 +31,10 @@ const User = sequelize.define('User', {
     points: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
+    },
+    joinDate: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
     }
 });
 

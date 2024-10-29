@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, TeamMember } = require('discord.js');
 const { Teams, User, MilestoneLevels } = require('../../../model/model');
 
 module.exports = {
@@ -32,6 +32,7 @@ module.exports = {
                     teamDescription: teamDesc,
                     teamLeader: ownerId,
                     teamPoints: 0,
+                    teamMembers: null,
                     teamImage,
                 });
 
@@ -325,25 +326,25 @@ module.exports = {
     removeRank: {
         execute: async (interaction) => {
             try {
-                const rankName = interaction.options.getString('rank-name');
+                const rankName = interaction.options.getString('role-name');
+                console.log(`Rank Name: ${rankName}`);
 
-                if (!rankName) {
-                    return interaction.reply({ content: 'Please provide the rank name.', ephemeral: true });
-                }
+                if (!rankName) { return interaction.reply({ content: 'Please provide the rank name.', ephemeral: true }); }
 
                 const guildId = interaction.guild.id;
 
-                const existingRank = await MilestoneLevels.findOne({ where: { rankName, guildId } });
-                if (!existingRank) {
-                    return interaction.reply({ content: 'Rank not found in the database.', ephemoral: true });
-                }
+                const existingRank = await MilestoneLevels.findOne({ where: { name: rankName, guildId } });
+                console.log(`Existing Rank: ${existingRank}`);
+                if (!existingRank) { return interaction.reply({ content: 'Rank not found in the database.', ephemoral: true }); }
 
                 const role = interaction.guild.roles.cache.get(existingRank.roleId);
-                if (role) {
-                    await role.delete();
-                }
+                console.log(`Role: ${role}`);
+                if (role) { await role.delete(); }
 
                 await existingRank.destroy();
+                // Remove the rank from the user database
+                await User.destroy({ where: { ranks: existingRank.roleId, guildId } }); 
+
 
                 const embed = new EmbedBuilder()
                     .setColor(0xFF0000)
@@ -362,11 +363,13 @@ module.exports = {
     editRank: {
         execute: async (interaction) => {
             try {
-                const rankName = interaction.options.getString('rank-name');
-                const newRankName = interaction.options.getString('new-rank-name');
-                const newRankPoints = interaction.options.getInteger('new-rank-points');
+                const rankName = interaction.options.getString('role-name');
+                const newRankName = interaction.options.getString('new-role-name');
+                const newRankPoints = interaction.options.getInteger('required-points');
+                const newRankDays = interaction.options.getInteger('required-days');
 
-                if (!rankName || (!newRankName && !newRankPoints)) {
+                if (!rankName || (!newRankName && !newRankPoints && !newRankDays)) {
+
                     return interaction.reply({ content: 'Please provide the rank name and either the new rank name or the new rank points.', ephemeral: true });
                 }
 
@@ -377,25 +380,20 @@ module.exports = {
                     return interaction.reply({ content: 'Rank not found in the database.', ephemeral: true });
                 }
 
-                if (newRankName) {
-                    existingRank.rankName = newRankName;
-                }
-                if (newRankPoints) {
-                    existingRank.rankPoints = newRankPoints;
-                }
+                if (newRankName) { existingRank.rankName = newRankName; }
+                if (newRankPoints) { existingRank.rankPoints = newRankPoints; }
+                if (newRankDays) { existingRank.durationDays = newRankDays; }
 
                 const role = interaction.guild.roles.cache.get(existingRank.roleId);
-                if (role) {
-                    role.setName(newRankName);
-                }
+                if (role) { role.setName(newRankName); }
 
                 await existingRank.save();
 
                 const embed = new EmbedBuilder()
                     .setColor(0x00FF00)
                     .setTitle('Rank Edited ✅')
-                    .setDescription(`Successfully edited rank ${rankName}.`)
-                    .setTimestamp();
+                    .setDescription(`Successfully edited rank ${rankName}`)
+                    .setTimestamp();                
 
                 await interaction.reply({ embeds: [embed] });
             } catch (error) {

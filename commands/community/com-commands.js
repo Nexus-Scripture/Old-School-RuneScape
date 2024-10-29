@@ -231,7 +231,11 @@ module.exports = {
                         .setColor('#0099ff');
                     milestoneLevels.forEach((level, index) => {
                         embed.addFields(
-                            { name: `🔹 ${index + 1}. ${level.name}`, value: `⭐️ Points: ${level.points}, 🕒️ Duration: ${level.durationDays} days`, inline: false }
+                            { 
+                                name: `🔹 ${index + 1}. ${level.name}`, 
+                                value: `⭐️ Points: ${level.points}\n🕒️ Duration: ${level.durationDays} days\n💬 Description: ${level.description}`, 
+                                inline: true
+                            }
                         );
                     });
                     await interaction.reply({ embeds: [embed] });
@@ -419,5 +423,122 @@ module.exports = {
                 interaction.reply({ content: 'An error occurred while generating the help message. Please contact the admin. **Error code: 0hb**', ephemeral: true });
             }
         }
+    },
+
+    // //
+
+    joinTeam: {
+        execute: async (interaction) => {
+            console.log(`Attempting to join team for user ${interaction.user.id}`);
+            const teamName = interaction.options.getString('team-name');
+            console.log(`Team name: ${teamName}`);
+            const teamLeader = interaction.options.getUser ('team-leader');
+            console.log(`Team leader: ${teamLeader ? teamLeader.tag : 'Not specified'}`);
+    
+            try {
+                // Check if the team exists
+                const team = await Teams.findOne({ where: { teamName } });
+                console.log(`Team exists: ${team ? 'Yes' : 'No'}`);
+                if (!team) {
+                    console.error(`Team ${teamName} does not exist.`);
+                    return interaction.reply({ content: `Team ${teamName} does not exist.`, ephemeral: true });
+                }
+    
+                // Check if the user is already in a team
+                const userTeam = await User.findOne({ where: { userId: interaction.user.id } });
+                console.log(`User  is already in a team: ${userTeam ? 'Yes' : 'No'}`);
+                if (userTeam && userTeam.teamId) {
+                    console.error(`User  ${interaction.user.id} is already in a team.`);
+                    return interaction.reply({ content: `You are already in a team.`, ephemeral: true });
+                }
+    
+                // Check if the team leader is specified and if they are the actual leader of the team
+                if (teamLeader) {
+                    const teamLeaderId = team.leaderId;
+                    console.log(`Team leader ID: ${teamLeaderId}`);
+                    if (teamLeaderId !== teamLeader.id) {
+                        console.error(`The specified user is not the leader of team ${teamName}.`);
+                        return interaction.reply({ content: `The specified user is not the leader of team ${teamName}.`, ephemeral: true });
+                    }
+                }
+    
+                console.log(`Team ID: ${team.teamId}`);
+    
+                // Update user table with the teamId or insert with default data if user doesn't exist
+                const existingUser  = await User.findOne({ where: { userId: interaction.user.id } });
+                if (existingUser) {
+                    await existingUser .update({
+                        teamId: team.teamId,
+                    });
+                    console.log(`User  ${interaction.user.id} team ID updated.`);
+                } else {
+                    await User.create({
+                        userId: interaction.user.id,
+                        username: interaction.user.username,
+                        guildId: interaction.guild.id,
+                        teamId: team.teamId,
+                        days: 0,
+                    });
+                    console.log(`User  ${interaction.user.id} added to team ${teamName}.`);
+                }
+    
+                // Update the teamMembers field in the Teams table
+                const teamMembers = team.teamMembers ? team.teamMembers.split(',') : [];
+                if (!teamMembers.includes(interaction.user.id)) {
+                    teamMembers.push(interaction.user.id);
+                    await team.update({
+                        teamMembers: teamMembers.join(','),
+                    });
+                    console.log(`User  ${interaction.user.id} added to team members list for team ${teamName}.`);
+                }
+    
+                console.log(`User  ${interaction.user.id} has joined team ${teamName}`);
+                await interaction.reply({ content: `You have joined team ${teamName}!` });
+    
+            } catch (error) {
+                console.error("Database error:", error);
+                await interaction.reply({ content: "There was an error joining the team. Please try again later.", ephemeral: true });
+            }
+        },
+    },
+
+    leaveTeam: {
+        execute: async (interaction) => {
+            const teamName = interaction.options.getString('team-name');
+    
+            try {
+                // Check if the team exists
+                const team = await Teams.findOne({ where: { teamName } });
+                if (!team) {
+                    return interaction.reply({ content: `Team ${teamName} does not exist.`, ephemeral: true });
+                }
+    
+                // Check if the user is in the team
+                const user = await User.findOne({ where: { userId: interaction.user.id } });
+                if (!user || user.teamId !== team.teamId) {
+                    return interaction.reply({ content: `You are not a member of team ${teamName}.`, ephemeral: true });
+                }
+    
+                // Remove the user from the teamMembers field
+                const teamMembers = team.teamMembers ? team.teamMembers.split(',') : [];
+                const userIndex = teamMembers.indexOf(interaction.user.id);
+                if (userIndex > -1) {
+                    teamMembers.splice(userIndex, 1); // Remove the user ID from the array
+                    await team.update({
+                        teamMembers: teamMembers.join(','), // Update the teamMembers field
+                    });
+                    console.log(`User  ${interaction.user.id} removed from team members list for team ${teamName}.`);
+                }
+    
+                // Clear the teamId in the User table
+                await user.update({ teamId: null });
+                console.log(`User  ${interaction.user.id} has left team ${teamName}.`);
+    
+                await interaction.reply({ content: `You have left team ${teamName}!` });
+            } catch (error) {
+                console.error("Error leaving team:", error);
+                await interaction.reply({ content: "There was an error leaving the team. Please try again later.", ephemeral: true });
+            }
+        },
     },
 }
