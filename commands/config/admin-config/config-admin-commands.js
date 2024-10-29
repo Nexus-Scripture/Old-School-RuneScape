@@ -427,5 +427,31 @@ module.exports = {
                 await interaction.reply({ content: 'There was an error setting the daily rank up channel. Please try again later.', ephemeral: true });
             }
         }
-    }
+    },
+
+    logChannel: {
+        execute: async (interaction) => {
+            try {
+                const guildId = interaction.guild.id;
+                const channel = interaction.options.getChannel('channel');
+                const channelId = channel.id; // Get the channel ID directly
+                console.log(`Channel: ${channelId}`);
+
+                // Update the server settings to set the logChannelId to the new channel ID
+                await Server.update({ loggingChannelId: channelId }, { where: { serverId: guildId } });
+
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('Log Channel Updated')
+                    .setDescription(`<#${channel.id}> has been set as the log channel!`)
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [embed] });
+
+            } catch (error) {
+                console.error('Error setting log channel:', error);
+                await interaction.reply({ content: 'There was an error setting the log channel. Please try again later.', ephemeral: true });
+            }
+        }
+    },
 }

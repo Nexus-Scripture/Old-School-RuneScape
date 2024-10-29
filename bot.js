@@ -404,6 +404,16 @@ const commands = [
             option.setName('channel')
             .setDescription('The channel to send rank up notifications')
             .setRequired(true)),
+
+    // ! Setup Log Channel
+    new SlashCommandBuilder()
+        .setName('log-channel')
+        .setDescription('Setup a channel for log notifications')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageGuild)
+        .addChannelOption(option =>
+            option.setName('channel')
+            .setDescription('The channel to send log notifications')
+            .setRequired(true)),
     
 
 ].map(command => command.toJSON());
@@ -653,6 +663,8 @@ client.on(Events.InteractionCreate, async interaction => {
     if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await adminCongifCommands.removeRank.execute(interaction); } 
     // //
     if (commandName === 'daily-rank-up-channel') { console.log(`daily-rank-up-channel`); await adminCongifCommands.dailyRankUpChannel.execute(interaction); }
+    if (commandName === 'log-channel') {  console.log(`log-channel`); await adminCongifCommands.logChannel.execute(interaction); }
+
     // //
 
     // * Community Configuration Commands - Setup, Edit, Remove Commands
@@ -702,11 +714,13 @@ const wholeFiveHours = wholeHour * 5;
 // //
 const wholeDay = wholeHour * 24;
 const wholeWeek = wholeDay * 7;
-const wholeMonth = wholeDay * 30;
+const wholeMonth = wholeWeek * 4;
+const wholeYear = wholeMonth * 12;
+// //
 
 
 setInterval(() => processLogs(client), wholeFiveMins);
-setInterval(() => updateUser_Days(client), 5000);
+setInterval(() => updateUser_Days(client), wholeFiveHours);
 
 // //
 
