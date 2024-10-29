@@ -391,7 +391,20 @@ const commands = [
     // ! Help
     new SlashCommandBuilder()
         .setName('help')
-        .setDescription('Display help information for commands')
+        .setDescription('Display help information for commands'),
+
+    // //
+
+    // ! Setup Rank Up Channel
+    new SlashCommandBuilder()
+        .setName('daily-rank-up-channel')
+        .setDescription('Setup a channel for rank up notifications')
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageGuild)
+        .addChannelOption(option =>
+            option.setName('channel')
+            .setDescription('The channel to send rank up notifications')
+            .setRequired(true)),
+    
 
 ].map(command => command.toJSON());
 
@@ -638,6 +651,9 @@ client.on(Events.InteractionCreate, async interaction => {
     if (commandName === 'add-rank') { console.log(`add-rank command ran`); await adminCongifCommands.addRank.execute(interaction); }
     if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await adminCongifCommands.editRank.execute(interaction); }
     if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await adminCongifCommands.removeRank.execute(interaction); } 
+    // //
+    if (commandName === 'daily-rank-up-channel') { console.log(`daily-rank-up-channel`); await adminCongifCommands.dailyRankUpChannel.execute(interaction); }
+    // //
 
     // * Community Configuration Commands - Setup, Edit, Remove Commands
     // ! Add Commands Here

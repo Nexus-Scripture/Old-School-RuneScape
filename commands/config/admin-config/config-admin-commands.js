@@ -1,5 +1,5 @@
 const { EmbedBuilder, TeamMember } = require('discord.js');
-const { Teams, User, MilestoneLevels } = require('../../../model/model');
+const { Teams, User, MilestoneLevels, Server } = require('../../../model/model');
 
 module.exports = {
     addTeams: {
@@ -402,4 +402,30 @@ module.exports = {
             }
         }
     },
+
+    dailyRankUpChannel: {
+        execute: async (interaction) => {
+            try {
+                const guildId = interaction.guild.id;
+                const channel = interaction.options.getChannel('channel');
+                const channelId = channel.id; // Get the channel ID directly
+                console.log(`Channel: ${channelId}`);
+    
+                // Update the server settings to set the rankUpId to the new channel ID
+                await Server.update({ rankUpChannelId: channelId }, { where: { serverId: guildId } });
+    
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('Daily Rank Up Channel Updated')
+                    .setDescription(`<#${channel.id}> has been set as the daily rank up channel!`)
+                    .setTimestamp();
+    
+                await interaction.reply({ embeds: [embed] });
+    
+            } catch (error) {
+                console.error('Error setting daily rank up channel:', error);
+                await interaction.reply({ content: 'There was an error setting the daily rank up channel. Please try again later.', ephemeral: true });
+            }
+        }
+    }
 }

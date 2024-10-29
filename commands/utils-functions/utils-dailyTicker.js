@@ -1,8 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
-const { User, MilestoneLevels } = require('../../model/model.js'); // Adjust the path as necessary
+const { User, MilestoneLevels, Server } = require('../../model/model.js'); // Adjust the path as necessary
 const { Op } = require('sequelize'); // Make sure to import Op if you're using Sequelize operators
 
-const updateUser_Days = async (client) => { // Corrected function name
+const updateUser_Days = async (client) => {
     try {
         console.log('Ticked users for daily milestone.');
 
@@ -14,9 +14,7 @@ const updateUser_Days = async (client) => { // Corrected function name
 
             // Calculate the difference in days
             const diffTime = Math.abs(currentDate - joinDate);
-            // const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); // Convert to days
             const diffDays = Math.floor(diffTime / 10000); // Convert to days
-
 
             // Update the user's days in the database if necessary
             if (diffDays > user.days) {
@@ -48,15 +46,26 @@ const assignRankRole = async (user, days, client) => {
                 // Add role id to User table
                 await user.update({ ranks: role.id });
 
-                // Embed message showing they achieved the role
-                const embed = new EmbedBuilder()
-                    .setColor('#00ff00')
-                    .setTitle('Rank Achievement!')
-                    .setDescription(`Congratulations <@${user.userId}>, you have achieved the rank of ${role.name}!`)
-                    .setTimestamp();
-                
-                return embed;
+                // Fetch the server settings to get the rankUpId
+                const server = await Server.findOne({ where: { serverId: user.guildId } });
+                const channelId = server.rankUpChannelId; // Assuming rankUpId is stored here
 
+                // Fetch the channel using the channelId
+                const channel = client.channels.cache.get(channelId);
+                if (channel) {
+                    // Embed message showing they achieved the role
+                    const embed = new EmbedBuilder()
+                        .setColor('#00ff00')
+                        .setTitle('Rank Achievement!')
+                        .setDescription(`Congratulations <@${user.userId}>, you have achieved the rank of ${role.name}!`)
+                        .setTimestamp();
+
+                    // Send the embed to the channel
+                    await channel.send({ embeds: [embed] });
+                    console.log(`Sent rank achievement message to channel ${channelId}`);
+                } else {
+                    console.error(`Channel with ID ${channelId} not found.`);
+                }
             }
         }
     }
