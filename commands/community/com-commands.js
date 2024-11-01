@@ -1,12 +1,8 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { User, Teams, MilestoneLevels } = require('../../model/model.js');
-const {
-    roleChecker
-} = require('../utils-functions/utils-handles.js');
 
-const {
-    executeLeaderboard
-} = require('../utils-functions/utils-leaderboards.js');
+const { roleChecker } = require('../utils-functions/utils-handles.js');
+const { executeLeaderboard } = require('../utils-functions/utils-leaderboards.js');
 
 module.exports = {
     leaderboard: {
@@ -194,7 +190,7 @@ module.exports = {
                     await interaction.reply({ embeds: [embed] });
                 } else {
                     const teamMembers = team.teamMembers ? team.teamMembers.split(',') : [];
-                    const teamMembersList = teamMembers.length > 0 ? teamMembers.map(member => `- ${member}`).join('\n') : 'No Members Yet';
+                    const teamMembersList = teamMembers.length > 0 ? teamMembers.map(member => `- <@${member}>`).join('\n') : 'No Members Yet';
                     const embed = new EmbedBuilder()
                         .setTitle(`🛡️ ${team.teamName}`)
                         .setDescription(team.teamDescription || 'No description available.')
@@ -217,7 +213,10 @@ module.exports = {
     viewRanks: {
         execute: async (interaction) => {
             try {
-                const milestoneLevels = await MilestoneLevels.findAll({ where: { guildId: interaction.guild.id } });
+                const milestoneLevels = await MilestoneLevels.findAll({
+                    where: { guildId: interaction.guild.id },
+                    order: [['points', 'ASC']],
+                });
                 if (milestoneLevels.length === 0) {
                     const embed = new EmbedBuilder()
                         .setTitle('🏆 View Rank')
@@ -231,9 +230,9 @@ module.exports = {
                         .setColor('#0099ff');
                     milestoneLevels.forEach((level, index) => {
                         embed.addFields(
-                            { 
-                                name: `🔹 ${index + 1}. ${level.name}`, 
-                                value: `⭐️ Points: ${level.points}\n🕒️ Duration: ${level.durationDays} days\n💬 Description: ${level.description}`, 
+                            {
+                                name: `🔹 ${index + 1}. ${level.name}`,
+                                value: `⭐️ Points: **${level.points}**\n🕒️ Duration: **${level.durationDays}** days\n💬 Description: *${level.description}*`, 
                                 inline: true
                             }
                         );
@@ -444,75 +443,125 @@ module.exports = {
         execute: async (interaction) => {
             console.log(`Attempting to join team for user ${interaction.user.id}`);
             const teamName = interaction.options.getString('team-name');
-            console.log(`Team name: ${teamName}`);
-            const teamLeader = interaction.options.getUser ('team-leader');
-            console.log(`Team leader: ${teamLeader ? teamLeader.tag : 'Not specified'}`);
-    
+            
             try {
                 // Check if the team exists
-                const team = await Teams.findOne({ where: { teamName } });
-                console.log(`Team exists: ${team ? 'Yes' : 'No'}`);
+                const team = await Teams.findOne({ 
+                    where: { 
+                        teamName,
+                        guildId: interaction.guild.id 
+                    } 
+                });
+    
                 if (!team) {
-                    console.error(`Team ${teamName} does not exist.`);
-                    return interaction.reply({ content: `Team ${teamName} does not exist.`, ephemeral: true });
+                    return interaction.reply({ 
+                        content: `Team "${teamName}" does not exist.`, 
+                        ephemeral: true 
+                    });
                 }
     
                 // Check if the user is already in a team
-                const userTeam = await User.findOne({ where: { userId: interaction.user.id } });
-                console.log(`User  is already in a team: ${userTeam ? 'Yes' : 'No'}`);
-                if (userTeam && userTeam.teamId) {
-                    console.error(`User  ${interaction.user.id} is already in a team.`);
-                    return interaction.reply({ content: `You are already in a team.`, ephemeral: true });
-                }
+                const user = await User.findOne({ 
+                    where: { 
+                        userId: interaction.user.id,
+                        guildId: interaction.guild.id
+                    } 
+                });
     
-                // Check if the team leader is specified and if they are the actual leader of the team
-                if (teamLeader) {
-                    const teamLeaderId = team.leaderId;
-                    console.log(`Team leader ID: ${teamLeaderId}`);
-                    if (teamLeaderId !== teamLeader.id) {
-                        console.error(`The specified user is not the leader of team ${teamName}.`);
-                        return interaction.reply({ content: `The specified user is not the leader of team ${teamName}.`, ephemeral: true });
-                    }
-                }
-    
-                console.log(`Team ID: ${team.teamId}`);
-    
-                // Update user table with the teamId or insert with default data if user doesn't exist
-                const existingUser  = await User.findOne({ where: { userId: interaction.user.id } });
-                if (existingUser) {
-                    await existingUser .update({
-                        teamId: team.teamId,
+                if (user?.teamId) {
+                    return interaction.reply({ 
+                        content: `You are already in a team. Please leave your current team first.`, 
+                        ephemeral: true 
                     });
-                    console.log(`User  ${interaction.user.id} team ID updated.`);
+                }
+    
+                // Check if the team is full (optional - if you have a max team size)
+                const teamMembers = team.teamMembers ? team.teamMembers.split(',') : [];
+                const MAX_TEAM_SIZE = 10; // Set your desired max team size
+                
+                if (teamMembers.length >= MAX_TEAM_SIZE) {
+                    return interaction.reply({ 
+                        content: `Sorry, team "${teamName}" is full.`, 
+                        ephemeral: true 
+                    });
+                }
+    
+                // Add user to team
+                if (user) {
+                    // Update existing user
+                    await user.update({
+                        teamId: team.teamId
+                    });
                 } else {
+                    // Create new user entry
                     await User.create({
                         userId: interaction.user.id,
                         username: interaction.user.username,
                         guildId: interaction.guild.id,
                         teamId: team.teamId,
-                        days: 0,
+                        points: 0,
+                        days: 0
                     });
-                    console.log(`User  ${interaction.user.id} added to team ${teamName}.`);
                 }
     
-                // Update the teamMembers field in the Teams table
-                const teamMembers = team.teamMembers ? team.teamMembers.split(',') : [];
+                // Update team members list
                 if (!teamMembers.includes(interaction.user.id)) {
                     teamMembers.push(interaction.user.id);
                     await team.update({
                         teamMembers: teamMembers.join(','),
+                        teamMemberCount: teamMembers.length // If you track member count
                     });
-                    console.log(`User  ${interaction.user.id} added to team members list for team ${teamName}.`);
                 }
     
-                console.log(`User  ${interaction.user.id} has joined team ${teamName}`);
-                await interaction.reply({ content: `You have joined team ${teamName}!` });
+                // Create success embed
+                const successEmbed = new EmbedBuilder()
+                    .setTitle('✅ Team Joined Successfully')
+                    .setDescription(`You have joined team "${teamName}"!`)
+                    .setColor(0x00FF00)
+                    .addFields(
+                        { 
+                            name: 'Team', 
+                            value: teamName, 
+                            inline: true 
+                        },
+                        { 
+                            name: 'Members', 
+                            value: `${teamMembers.length}`, 
+                            inline: true 
+                        }
+                    )
+                    .setTimestamp();
+    
+                // Optional: Log to a specific channel
+                const logChannel = interaction.guild.channels.cache.get('YOUR_LOG_CHANNEL_ID');
+                if (logChannel) {
+                    logChannel.send({
+                        content: `${interaction.user.tag} joined team "${teamName}"`
+                    }).catch(err => console.log('Could not log to channel'));
+                }
+    
+                // Reply to the user
+                await interaction.reply({ 
+                    embeds: [successEmbed],
+                    ephemeral: false // Set to true if you want only the user to see it
+                });
     
             } catch (error) {
-                console.error("Database error:", error);
-                await interaction.reply({ content: "There was an error joining the team. Please try again later.", ephemeral: true });
+                console.error("Join team error:", error);
+                
+                // Create error embed
+                const errorEmbed = new EmbedBuilder()
+                    .setTitle('❌ Error Joining Team')
+                    .setDescription('There was an error while trying to join the team. Please try again later.')
+                    .setColor(0xFF0000)
+                    .setTimestamp();
+    
+                await interaction.reply({ 
+                    embeds: [errorEmbed], 
+                    ephemeral: true 
+                });
             }
-        },
+        }
     },
 
     leaveTeam: {

@@ -8,136 +8,85 @@ module.exports = {
             try {
                 console.log("Executing addPoints command...");
                 const points = interaction.options.getInteger("points");
-                console.log("Points:", points);
-                const userMention = interaction.options.getUser ("user");
-                console.log("User  Mention:", userMention);
-                const userId = userMention.id;
-                console.log("User  ID:", userId);
-    
+                const userMention = interaction.options.getUser("user");
                 const guildId = interaction.guild.id;
-                console.log("Guild ID:", guildId);
     
-                if (!points || !userId) {
-                    console.log("Points or User ID not provided.");
-                    return interaction.reply({
-                        content: "Please provide both points and user ID.",
-                        ephemeral: true,
-                    });
-                }
-    
-                const user = await User.findOne({ where: { userId, guildId } });
-                console.log("User :", user);
-                if (!user) {
-                    console.log("User not found in the database.");
-                    return interaction.reply({
-                        content: "User not found in the database.",
-                        ephemeral: true,
-                    });
+                if (!points) {
+                    return interaction.reply({ content: "Please provide both points", ephemeral: true });
                 }
     
                 // Check if a team name is included
                 const teamName = interaction.options.getString("team-name");
-                console.log("Team Name:", teamName);
                 if (teamName) {
-                    const team = await Teams.findOne({
-                        where: { teamName, guildId },
-                    });
-                    console.log("Team:", team);
+                    const team = await Teams.findOne({ where: { teamName, guildId } });
                     if (!team) {
-                        console.log("Team not found in the database.");
-                        return interaction.reply({
-                            content: "Team not found in the database.",
-                            ephemeral: true,
-                        });
+                        return interaction.reply({ content: "Team not found in the database.", ephemeral: true });
                     }
-                    // Add points to the team instead of the user
                     await team.increment("teamPoints", { by: points });
                     const embed = new EmbedBuilder()
                         .setColor(0x00ff00)
                         .setTitle("Points Added to Team ✨")
-                        .setDescription(
-                            `Successfully added ${points} points to the team ${teamName}.`
-                        )
+                        .setDescription(`Successfully added ${points} points to the team ${teamName}.`)
                         .setTimestamp();
     
-                    return await interaction.reply({ embeds: [embed] }); // Return here
-                } else {
-                    await user.increment("points", { by: points });
-
-                    await interaction.deferReply();
-                    
-                    // Check if user meets a milestone rank
-                    const milestoneRanks = await MilestoneLevels.findAll({
-                        where: { guildId },
-                    });
-                    
-                    for (const rank of milestoneRanks) {
-                        console.log(`User Points: ${user.points}`);
-                        console.log(
-                            "Milestone Ranks:",
-                            milestoneRanks.map(
-                                (rank) => `Rank: ${rank.name}, Points: ${rank.points}`
-                            )
-                        );
-                    
-                        if (user.points >= rank.points) {
-                            // Fetch roles to ensure they are cached
-                            await interaction.guild.roles.fetch();
-                    
-                            const role = interaction.guild.roles.cache.find(
-                                (role) => role.id === rank.roleId // Compare with role.id
-                            );
-                    
-                            console.log("Role ID:", rank.roleId); // Log the role ID
-                            console.log("Role:", role); // Log the found role
-                    
-                            if (role) {
-                                try {
-                                    // Get the member object for the user
-                                    const member = await interaction.guild.members.fetch(userId);
-                            
-                                    // Create the embed for points added
-                                    const embed = new EmbedBuilder()
-                                        .setColor(0x00ff00)
-                                        .setTitle("Points Added ✨")
-                                        .setDescription(`Successfully added ${points} points to ${userMention.displayName}.`)
-                                        .setTimestamp();
-                            
-                                    // Check if the member already has the role
-                                    if (!member.roles.cache.has(role.id)) {
-                                        await member.roles.add(role); // Use member.roles.add
-                                        console.log(`Assigned role ${role.name} to ${userMention.displayName}`);
-                                        console.log(`Inserting ${rank.id} into database`);
-                            
-                                        await user.update({ ranks: role.id }, { where: { userId } });
-                            
-                                        // Add rank unlocked field to the embed
-                                        embed.addFields({
-                                            name: "Rank Unlocked 🔓",
-                                            value: `Congratulations, ${userMention.displayName}! You have unlocked the rank **${rank.name}**.`,
-                                        });
-                                    }
-                            
-                                    // Send the combined embed
-                                    await interaction.followUp({ embeds: [embed] });
-                            
-                                } catch (error) {
-                                    console.error("Failed to assign role:", error);
-                                    await interaction.followUp({ content: "There was an error assigning the role.", ephemeral: true });
-                                }
-                            } else {
-                                console.error(`Role with ID ${rank.roleId} not found.`);
-                                await interaction.reply({ content: "Role not found.", ephemeral: true });
+                    return interaction.reply({ embeds: [embed] });
+                }
+    
+                const userId = userMention.id;
+                const user = await User.findOne({ where: { userId, guildId } });
+                if (!user) {
+                    return interaction.reply({ content: "User not found in the database.", ephemeral: true });
+                }
+    
+                await user.increment("points", { by: points });
+    
+                // Fetch updated user data to ensure points are accurate
+                const updatedUser = await User.findOne({ where: { userId, guildId } });
+                const milestoneRanks = await MilestoneLevels.findAll({ where: { guildId } });
+                await interaction.deferReply(); // Defers the reply to give time for processing
+    
+                const embed = new EmbedBuilder()
+                    .setColor(0x00ff00)
+                    .setTitle("✨ Points Added ✨")
+                    .setDescription(`Successfully added ${points} points to ${userMention.displayName}.`)
+                    .setTimestamp();
+    
+                let rankUnlocked = false;
+    
+                for (const rank of milestoneRanks) {
+                    if (updatedUser.points >= rank.points) {
+                        await interaction.guild.roles.fetch();
+                        const role = interaction.guild.roles.cache.get(rank.roleId);
+    
+                        if (role) {
+                            const member = await interaction.guild.members.fetch(userId);
+                            if (!member.roles.cache.has(role.id)) {
+                                await member.roles.add(role);
+                                console.log(`Assigned role ${role.name} to ${userMention.displayName}`);
+                                await user.update({ ranks: role.id });
+    
+                                embed.addFields({
+                                    name: "🔓 Rank Unlocked 🔓",
+                                    value: `Congratulations, ${userMention.username}! You have unlocked the rank **${rank.name}**.`,
+                                });
+                                rankUnlocked = true;
                             }
+                        } else {
+                            console.error(`Role with ID ${rank.roleId} not found.`);
+                            return interaction.followUp({ content: "Role not found.", ephemeral: true });
                         }
                     }
                 }
+    
+                await interaction.followUp({ embeds: [embed] });
             } catch (error) {
                 console.error("Error adding points:", error);
-                await interaction.reply({
-                    content: "There was an error adding points. Please try again later.",
-                    ephemeral: true,
-                });
+                if (!interaction.replied) {
+                    await interaction.followUp({
+                        content: "There was an error adding points. Please try again later.",
+                        ephemeral: true,
+                    });
+                }
             }
         },
     },
@@ -147,73 +96,102 @@ module.exports = {
             try {
                 const points = interaction.options.getInteger("points");
                 const userMention = interaction.options.getUser("user");
-                const userId = userMention.id;
+
+                const teamName = interaction.options.getString("team-name");
+
                 const guildId = interaction.guild.id;
 
-                if (!points || !userId) {
+                if (!points) {
                     return interaction.reply({
-                        content: "Please provide both points and user ID.",
+                        content: "Please provide both points",
                         ephemeral: true,
                     });
                 }
 
-                const user = await User.findOne({ where: { userId, guildId } });
-                if (!user) {
-                    return interaction.reply({
-                        content: "User not found in the database.",
-                        ephemeral: true,
-                    });
-                }
+                if (userMention) {
+                    const userId = userMention.id;
 
-                // Ensure the user's points do not go below 0
-                const newPoints = Math.max(0, user.points - points);
-                await user.update({ points: newPoints });
-
-                const embed = new EmbedBuilder()
-                    .setColor(0xffd900)
-                    .setTitle("Points Removed 🚫")
-                    .setDescription(`Successfully removed ${points} points from ${userMention.displayName}.`)
-                    .setTimestamp();
-
-                await interaction.reply({ embeds: [embed] });
-
-                // Check if the user needs to lose their rank
-                const currentRankId = user.rankId; // Assuming user.rankId holds the current rank ID
-                if (currentRankId) {
-                    const rankRole = await interaction.guild.roles.fetch(currentRankId);
-                    const requiredPoints = rankRole.requiredPoints; // Assuming the role has a property for required points
-
-                    // Check if the user's points are below the required points for their current rank
-                    if (user.points < requiredPoints) {
-                        const member = await interaction.guild.members.fetch(userId);
-                        await member.roles.remove(rankRole.id);
-                        console.log(`User ${userMention.displayName} has been removed from the rank: ${rankRole.name}`);
-
-                        // Update the user's rank in the database
-                        await user.update({ rankId: null }); // Clear the rankId field
-
-                        // Send an embed message to the user
-                        const rankEmbed = new EmbedBuilder()
-                            .setColor(0xffd900)
-                            .setTitle("Rank Removed 🚫")
-                            .setDescription(`You have been removed from the rank: ${rankRole.name} due to insufficient points.`)
-                            .addFields(
-                                {
-                                    name: "Rank Name",
-                                    value: rankRole.name,
-                                    inline: true,
-                                },
-                                {
-                                    name: "Required Points",
-                                    value: requiredPoints.toString(),
-                                    inline: true,
-                                }
-                            )
-                            .setTimestamp();
-
-                        await interaction.followUp({ embeds: [rankEmbed] });
+                    const user = await User.findOne({ where: { userId, guildId } });
+                    if (!user) {
+                        return interaction.reply({
+                            content: "User not found in the database.",
+                            ephemeral: true,
+                        });
                     }
+
+                    // Ensure the user's points do not go below 0
+                    const newPoints = Math.max(0, user.points - points);
+                    await user.update({ points: newPoints });
+
+                    const embed = new EmbedBuilder()
+                        .setColor(0xffd900)
+                        .setTitle("Points Removed 🚫")
+                        .setDescription(`Successfully removed ${points} points from ${userMention.displayName}.`)
+                        .setTimestamp();
+
+                    await interaction.reply({ embeds: [embed] });
+
+                    // Check if the user needs to lose their rank
+                    const currentRankId = user.rankId; // Assuming user.rankId holds the current rank ID
+                    if (currentRankId) {
+                        const rankRole = await interaction.guild.roles.fetch(currentRankId);
+                        const requiredPoints = rankRole.requiredPoints; // Assuming the role has a property for required points
+
+                        // Check if the user's points are below the required points for their current rank
+                        if (user.points < requiredPoints) {
+                            const member = await interaction.guild.members.fetch(userId);
+                            await member.roles.remove(rankRole.id);
+                            console.log(`User ${userMention.displayName} has been removed from the rank: ${rankRole.name}`);
+
+                            // Update the user's rank in the database
+                            await user.update({ rankId: null }); // Clear the rankId field
+
+                            // Send an embed message to the user
+                            const rankEmbed = new EmbedBuilder()
+                                .setColor(0xffd900)
+                                .setTitle("Rank Removed 🚫")
+                                .setDescription(`You have been removed from the rank: ${rankRole.name} due to insufficient points.`)
+                                .addFields(
+                                    {
+                                        name: "Rank Name",
+                                        value: rankRole.name,
+                                        inline: true,
+                                    },
+                                    {
+                                        name: "Required Points",
+                                        value: requiredPoints.toString(),
+                                        inline: true,
+                                    }
+                                )
+                                .setTimestamp();
+
+                            await interaction.followUp({ embeds: [rankEmbed] });
+                        }
+                    }
+                } else {
+                    const team = await Teams.findOne({ where: { teamName, guildId } });
+
+                    if (!team) {
+                        return interaction.reply({
+                            content: "User not found in the database.",
+                            ephemeral: true,
+                        });
+                    }
+
+                    // Ensure the user's points do not go below 0
+                    const newPoints = Math.max(0, team.teamPoints - points);
+                    await team.update({ teamPoints: newPoints });
+
+                    const embed = new EmbedBuilder()
+                        .setColor(0xffd900)
+                        .setTitle("Points Removed 🚫")
+                        .setDescription(`Successfully removed ${points} points from ${teamName}.`)
+                        .setTimestamp();
+
+                    await interaction.reply({ embeds: [embed] });
                 }
+
+                
             } catch (error) {
                 console.error("Error removing points:", error);
                 await interaction.reply({
@@ -240,10 +218,6 @@ module.exports = {
                 const color =
                     interaction.options.getString("color") || "#ffffff";
                 const footer = interaction.options.getString("footer") || null;
-                const thumbnail = interaction.user.displayAvatarURL({
-                    dynamic: true,
-                    size: 1024,
-                });
                 const image = interaction.options.getString("image") || null;
                 const channel =
                     interaction.options.getChannel("channel") ||
@@ -282,7 +256,6 @@ module.exports = {
                     description,
                     color,
                     footer,
-                    thumbnail,
                     image,
                     channelId: channel.id,
                     roleId,
@@ -303,11 +276,6 @@ module.exports = {
                     embed.setFooter({ text: `${footer} • ${formattedDate}` });
                 } else {
                     embed.setFooter({ text: `${formattedDate}` });
-                }
-                if (thumbnail) {
-                    embed.setThumbnail(thumbnail);
-                } else {
-                    embed.setThumbnail(thumbnailUrl);
                 }
                 if (image) embed.setImage(image);
 

@@ -49,8 +49,6 @@ module.exports = {
                     .setColor(0xFF0000);
                 interaction.reply({ embeds: [embed], ephemeral: true });
             }
-
-
         }
     },
 
@@ -363,11 +361,13 @@ module.exports = {
     editRank: {
         execute: async (interaction) => {
             try {
+                console.log('Started');
                 const rankName = interaction.options.getString('role-name');
                 const newRankName = interaction.options.getString('new-role-name');
                 const newRankPoints = interaction.options.getInteger('required-points');
                 const newRankDays = interaction.options.getInteger('required-days');
 
+                console.log('Starting If Statement');
                 if (!rankName || (!newRankName && !newRankPoints && !newRankDays)) {
 
                     return interaction.reply({ content: 'Please provide the rank name and either the new rank name or the new rank points.', ephemeral: true });
@@ -375,25 +375,29 @@ module.exports = {
 
                 const guildId = interaction.guild.id;
 
-                const existingRank = await MilestoneLevels.findOne({ where: { rankName, guildId } });
+                console.log('Existing Rank');
+                const existingRank = await MilestoneLevels.findOne({ where: { name: rankName, guildId } });
                 if (!existingRank) {
                     return interaction.reply({ content: 'Rank not found in the database.', ephemeral: true });
                 }
 
-                if (newRankName) { existingRank.rankName = newRankName; }
-                if (newRankPoints) { existingRank.rankPoints = newRankPoints; }
-                if (newRankDays) { existingRank.durationDays = newRankDays; }
+                console.log('Check if they exist, if so change');
+                if (newRankName) { console.log('new rank name exists'); existingRank.name = newRankName; }
+                if (newRankPoints) { console.log('new rank points exists'); existingRank.points = newRankPoints; }
+                if (newRankDays) { console.log('new rank days exists'); existingRank.durationDays = newRankDays; }
 
                 const role = interaction.guild.roles.cache.get(existingRank.roleId);
-                if (role) { role.setName(newRankName); }
+                if (role) { console.log('role exists'); role.setName(newRankName); }
 
+                console.log('saving new rank');
                 await existingRank.save();
 
+                console.log('sending message');
                 const embed = new EmbedBuilder()
                     .setColor(0x00FF00)
                     .setTitle('Rank Edited ✅')
-                    .setDescription(`Successfully edited rank ${rankName}`)
-                    .setTimestamp();                
+                    .setDescription(`Successfully edited rank: ${rankName} to ${newRankPoints}`)
+                    .setTimestamp();
 
                 await interaction.reply({ embeds: [embed] });
             } catch (error) {
