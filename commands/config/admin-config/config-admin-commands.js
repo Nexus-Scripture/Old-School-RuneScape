@@ -148,7 +148,7 @@ module.exports = {
                 await Teams.update(updateOptions, { where: { teamName } });
 
                 // Check if the team leader is changed
-                if (teamLeader && (existingTeam.teamLeader !== teamLeader.id || process.env.BOT_OWNER || process.env.COMISSIONER)) {
+                if (teamLeader || (existingTeam.teamLeader !== teamLeader.id || process.env.BOT_OWNER || process.env.COMISSIONER)) {
                     console.log(`Team leader change detected for team ${teamName}.`);
                     // Debug for team leader ID
                     console.log(`Current team leader ID: ${existingTeam.teamLeader}, New team leader ID: ${teamLeader.id}`);

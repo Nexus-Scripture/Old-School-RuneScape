@@ -482,7 +482,7 @@ client.once('ready', async () => {
         // Register slash commands for each guild dynamically
         try {
             // Call the setup function
-            setupCommands();
+            await setupCommands();
         } catch (error) {
             console.error(`Error registering commands for guilds: `, error);
         }
@@ -780,8 +780,4 @@ module.exports = { setupCommands };
 
 // //
 
-try {
-    client.login(process.env.LIVE_TOKEN);
-} catch (error) {
-    console.error("Failed to login with the provided token:", error);
-}
+client.login(process.env.LIVE_TOKEN);
