@@ -42,7 +42,7 @@ module.exports = {
                             • /remove-rank - Remove a rank from the server
                             `);
                         break;
-ee
+
                     case "owner_commands":
                         // Check if the user is the bot owner
                         if (interaction.user.id !== process.env.OWNER

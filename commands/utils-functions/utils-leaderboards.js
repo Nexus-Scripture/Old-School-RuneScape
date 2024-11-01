@@ -3,7 +3,6 @@ const { EmbedBuilder } = require('discord.js');
 
 async function executeLeaderboard(interaction) {
     const serverId = interaction.guild.id;
-    const channel = interaction.channel;
     try {
         // Fetch user data from the database using Sequelize
         const users = await User.findAll({
