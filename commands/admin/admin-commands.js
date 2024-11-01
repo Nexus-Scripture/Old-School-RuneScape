@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require("discord.js");
-const { Teams, User, MilestoneLevels } = require("../../model/model.js");
+const { Teams, User, MilestoneLevels, Server } = require("../../model/model.js");
 const { roleChecker } = require("../utils-functions/utils-handles.js");
 
 module.exports = {
@@ -25,60 +25,109 @@ module.exports = {
                     await team.increment("teamPoints", { by: points });
                     const embed = new EmbedBuilder()
                         .setColor(0x00ff00)
-                        .setTitle("Points Added to Team ✨")
+                        .setTitle("✨ Points Added to Team ✨")
                         .setDescription(`Successfully added ${points} points to the team ${teamName}.`)
                         .setTimestamp();
     
                     return interaction.reply({ embeds: [embed] });
-                }
-    
-                const userId = userMention.id;
-                const user = await User.findOne({ where: { userId, guildId } });
-                if (!user) {
-                    return interaction.reply({ content: "User not found in the database.", ephemeral: true });
-                }
-    
-                await user.increment("points", { by: points });
-    
-                // Fetch updated user data to ensure points are accurate
-                const updatedUser = await User.findOne({ where: { userId, guildId } });
-                const milestoneRanks = await MilestoneLevels.findAll({ where: { guildId } });
-                await interaction.deferReply(); // Defers the reply to give time for processing
-    
-                const embed = new EmbedBuilder()
-                    .setColor(0x00ff00)
-                    .setTitle("✨ Points Added ✨")
-                    .setDescription(`Successfully added ${points} points to ${userMention.displayName}.`)
-                    .setTimestamp();
-    
-                let rankUnlocked = false;
-    
-                for (const rank of milestoneRanks) {
-                    if (updatedUser.points >= rank.points) {
-                        await interaction.guild.roles.fetch();
-                        const role = interaction.guild.roles.cache.get(rank.roleId);
-    
-                        if (role) {
-                            const member = await interaction.guild.members.fetch(userId);
-                            if (!member.roles.cache.has(role.id)) {
-                                await member.roles.add(role);
-                                console.log(`Assigned role ${role.name} to ${userMention.displayName}`);
-                                await user.update({ ranks: role.id });
-    
-                                embed.addFields({
-                                    name: "🔓 Rank Unlocked 🔓",
-                                    value: `Congratulations, ${userMention.username}! You have unlocked the rank **${rank.name}**.`,
-                                });
-                                rankUnlocked = true;
+                } else {
+                    const userId = userMention.id;
+                    let user = await User.findOne({ where: { userId, guildId } });
+                    if (!user) {
+                        const newUser = await User.create({
+                            userId,
+                            guildId,
+                            username: userMention.username,
+                            teamId: null,
+                            points: 0,
+                            days: 0
+                        });
+                        user = newUser;
+                    }
+        
+                    await user.increment("points", { by: points });
+        
+                    // Fetch updated user data to ensure points are accurate
+                    const updatedUser = await User.findOne({ where: { userId, guildId } });
+                    const milestoneRanks = await MilestoneLevels.findAll({ where: { guildId } });
+                    await interaction.deferReply(); // Defers the reply to give time for processing
+        
+                    const embed = new EmbedBuilder()
+                        .setColor(0x00ff00)
+                        .setTitle("✨ Points Added ✨")
+                        .addFields(
+                            {
+                                name: "User",
+                                value: `<@${userMention.id}>`,
+                                inline: true,
+                            },
+                            {
+                                name: "Points Added",
+                                value: `+${points}`,
+                                inline: true,
+                            },
+                            {
+                                name: "Total Points",
+                                value: `${updatedUser.points}`,
+                                inline: true,
+                            },
+                            {
+                                name: "Current Rank",
+                                value: `${updatedUser.ranks ? `<@&${updatedUser.ranks}>` : "None"}`,
+                                inline: false,
                             }
-                        } else {
-                            console.error(`Role with ID ${rank.roleId} not found.`);
-                            return interaction.followUp({ content: "Role not found.", ephemeral: true });
+                        )
+                        .setTimestamp();
+
+                    // Determine the next rank and points required to reach it
+                    const milestoneSorted = await MilestoneLevels.findAll({ where: { guildId }, order: [['points', 'ASC']] });
+                    const nextRank = milestoneSorted.find(rank => updatedUser.points < rank.points);
+                    if (nextRank) {
+                        const pointsNeeded = nextRank.points - updatedUser.points;
+                        const daysNeeded = nextRank.durationDays - updatedUser.days;
+                        embed.addFields({
+                            name: "To Reach Next Rank",
+                            value: `**${nextRank.name}**\n${pointsNeeded} more points needed\n${daysNeeded} more days needed`,
+
+                            inline: false,
+                        });
+                    } else {
+                        embed.addFields({
+                            name: "To Reach Next Rank",
+                            value: "You have reached the highest rank!",
+                            inline: false,
+                        });
+                    }
+        
+                    let rankUnlocked = false;
+        
+                    for (const rank of milestoneRanks) {
+                        if (updatedUser.points >= rank.points) {
+                            await interaction.guild.roles.fetch();
+                            const role = interaction.guild.roles.cache.get(rank.roleId);
+        
+                            if (role) {
+                                const member = await interaction.guild.members.fetch(userId);
+                                if (!member.roles.cache.has(role.id)) {
+                                    await member.roles.add(role);
+                                    console.log(`Assigned role ${role.name} to ${userMention.displayName}`);
+                                    await user.update({ ranks: role.id });
+        
+                                    embed.addFields({
+                                        name: "🔓 Rank Unlocked",
+                                        value: `Congratulations, ${userMention.displayName}! You have unlocked the rank **${rank.name}**.`,
+                                    });
+                                    rankUnlocked = true;
+                                }
+                            } else {
+                                console.error(`Role with ID ${rank.roleId} not found.`);
+                                return interaction.followUp({ content: "Role not found.", ephemeral: true });
+                            }
                         }
                     }
+                
+                    await interaction.followUp({ embeds: [embed] });
                 }
-    
-                await interaction.followUp({ embeds: [embed] });
             } catch (error) {
                 console.error("Error adding points:", error);
                 if (!interaction.replied) {
@@ -309,4 +358,218 @@ module.exports = {
             }
         },
     },
+
+    forceJoin: {
+        execute: async (interaction) => {
+            console.log(`Attempting to join team for user ${interaction.user.id}`);
+            const teamName = interaction.options.getString('team-name');
+            const userMention = interaction.options.getUser('user');
+            const userId = userMention.id;
+            
+            try {
+                // Check if the team exists
+                const team = await Teams.findOne({ 
+                    where: { 
+                        teamName,
+                        guildId: interaction.guild.id 
+                    } 
+                });
+    
+                if (!team) {
+                    return interaction.reply({ 
+                        content: `Team "${teamName}" does not exist.`, 
+                        ephemeral: true 
+                    });
+                }
+    
+                // Check if the user is already in a team
+                const user = await User.findOne({ 
+                    where: { 
+                        userId: userId,
+                        guildId: interaction.guild.id
+                    } 
+                });
+    
+                if (user?.teamId) {
+                    return interaction.reply({ 
+                        content: `User is already in a team. They need to leave before joining a new team.`,  
+                        ephemeral: true 
+                    });
+                }
+    
+                // Check if the team is full (optional - if you have a max team size)
+                const teamMembers = team.teamMembers ? team.teamMembers.split(',') : [];
+                const MAX_TEAM_SIZE = 10; // Set your desired max team size
+                
+                if (teamMembers.length >= MAX_TEAM_SIZE) {
+                    return interaction.reply({ 
+                        content: `Sorry, team "${teamName}" is full.`, 
+                        ephemeral: true 
+                    });
+                }
+    
+                // Add user to team
+                if (user) {
+                    // Update existing user
+                    await user.update({
+                        teamId: team.teamId
+                    });
+                } else {
+                    // Create new user entry
+                    await User.create({
+                        userId: userId,
+                        username: interaction.user.username,
+                        guildId: interaction.guild.id,
+                        teamId: team.teamId,
+                        points: 0,
+                        days: 0
+                    });
+                }
+    
+                // Update team members list
+                if (!teamMembers.includes(userId)) {
+                    teamMembers.push(userId);
+                    await team.update({
+                        teamMembers: teamMembers.join(','),
+                        teamMemberCount: teamMembers.length // If you track member count
+                    });
+                }
+    
+                // Create success embed
+                const successEmbed = new EmbedBuilder()
+                    .setTitle('✅ Team Joined Successfully')
+                    .setDescription(`Admin Forced <@${userId}> have joined team "${teamName}"!`)
+                    .setColor(0x00FF00)
+                    .addFields(
+                        { 
+                            name: 'Team', 
+                            value: teamName, 
+                            inline: true 
+                        },
+                        { 
+                            name: 'Members', 
+                            value: `${teamMembers.length}`, 
+                            inline: true 
+                        },
+                        {
+                            name: 'Points',
+                            value: `${team.teamPoints}`,
+                            inline: true
+                        }
+                    )
+                    .setTimestamp();
+    
+                // Optional: Log to a specific channel
+                const logToChannel = Server.findOne({ where: { serverId: interaction.guild.id } });
+                const logChannelId = logToChannel.loggingChannelId;
+                console.log(`Logging Channel Id: ${logChannelId}`);
+
+                const logChannel = logChannelId;
+                if (logChannel) {
+                    logChannel.send({
+                        content: `${interaction.user.username} joined team "${teamName}"`
+                    }).catch(err => console.log('Could not log to channel'));
+                }
+    
+                // Reply to the user
+                await interaction.reply({ 
+                    embeds: [successEmbed],
+                    ephemeral: false // Set to true if you want only the user to see it
+                });
+    
+            } catch (error) {
+                console.error("Join team error:", error);
+                
+                // Create error embed
+                const errorEmbed = new EmbedBuilder()
+                    .setTitle('❌ Error Joining Team')
+                    .setDescription('There was an error while trying to join the team. Please try again later.')
+                    .setColor(0xFF0000)
+                    .setTimestamp();
+    
+                await interaction.reply({ 
+                    embeds: [errorEmbed], 
+                    ephemeral: true 
+                });
+            }
+        }
+    },
+
+    forceLeave: {
+        execute: async (interaction) => {
+            const teamName = interaction.options.getString('team-name');
+            const userMention = interaction.options.getUser('user');
+            const userId = userMention.id;
+    
+            try {
+                // Check if the team exists
+                const team = await Teams.findOne({ where: { teamName } });
+                if (!team) {
+                    return interaction.reply({ content: `Team ${teamName} does not exist.`, ephemeral: true });
+                }
+    
+                // Check if the user is in the team
+                const user = await User.findOne({ where: { userId: userId } });
+                if (!user || user.teamId !== team.teamId) {
+                    return interaction.reply({ content: `You are not a member of team ${teamName}.`, ephemeral: true });
+                }
+    
+                // Remove the user from the teamMembers field
+                const teamMembers = team.teamMembers ? team.teamMembers.split(',') : [];
+                const userIndex = teamMembers.indexOf(userId);
+                if (userIndex > -1) {
+                    teamMembers.splice(userIndex, 1); // Remove the user ID from the array
+                    await team.update({
+                        teamMembers: teamMembers.join(','), // Update the teamMembers field
+                    });
+                    console.log(`User ${userId} removed from team members list for team ${teamName}.`);
+                }
+    
+                // Clear the teamId in the User table
+                await user.update({ teamId: null });
+                console.log(`User  ${userId} has left team ${teamName}.`);
+
+                // Optional: Log to a specific channel
+                const logToChannel = Server.findOne({ where: { serverId: interaction.guild.id } });
+                const logChannelId = logToChannel.loggingChannelId;
+                console.log(`Logging Channel Id: ${logChannelId}`);
+
+                const logChannel = logChannelId;
+                if (logChannel) {
+                    logChannel.send({
+                        content: `${interaction.user.username} joined team "${teamName}"`
+                    }).catch(err => console.log('Could not log to channel'));
+                }
+                
+                // Send embed message
+                const successEmbed = new EmbedBuilder()
+                    .setTitle("✅ Team Left Successfully")
+                    .setDescription(`Admin forced <@${userId}> to leave team "${teamName}"!`)
+                    .setColor(0xe47830)
+                    .addFields(
+                        {
+                            name: 'Team',
+                            value: teamName,
+                            inline: true
+                        },
+                        {
+                            name: 'Members',
+                            value: `${teamMembers.length}`,
+                            inline: true
+                        },
+                        {
+                            name: 'Points',
+                            value: `${team.teamPoints}`,
+                            inline: true
+                        }
+                    )
+                    .setTimestamp();
+    
+                await interaction.reply({ embeds: [successEmbed] });
+            } catch (error) {
+                console.error("Error leaving team:", error);
+                await interaction.reply({ content: "There was an error leaving the team. Please try again later.", ephemeral: true });
+            }
+        }
+    }
 };

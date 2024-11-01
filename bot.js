@@ -10,6 +10,7 @@ const {
     ChannelType,
     PermissionsBitField,
     AuditLogEvent,
+    EmbedBuilder,
 } = require("discord.js");
 
 const client = new Client({ 
@@ -680,69 +681,78 @@ client.on(Events.InteractionCreate, async interaction => {
     fetchTeamNames();
 
     // //
+    try {
+        // ? Help Commands
+        // * Help Menu
+        if (commandName === 'help') { console.log(`help command ran`); await communityCommands.help.execute(interaction); }
 
-    // ? Help Commands
-    // * Help Menu
-    if (commandName === 'help') { console.log(`help command ran`); await communityCommands.help.execute(interaction); }
+        // //
+        // ? Admin Commands
+        // * Announcements
+        if (commandName === 'add-points') { console.log(`add-points command ran`); await adminCommands.addPoints.execute(interaction); }
+        if (commandName === 'remove-points') { console.log(`remove-points command ran`); await adminCommands.removePoints.execute(interaction); }
+        if (commandName === 'announce') { console.log(`announce command ran`); await adminCommands.announce.execute(interaction); }
 
-    // //
-    // ? Admin Commands
-    // * Announcements
-    if (commandName === 'add-points') { console.log(`add-points command ran`); await adminCommands.addPoints.execute(interaction); }
-    if (commandName === 'remove-points') { console.log(`remove-points command ran`); await adminCommands.removePoints.execute(interaction); }
-    if (commandName === 'announce') { console.log(`announce command ran`); await adminCommands.announce.execute(interaction); }
+        // //
 
-    // //
+        // ? Config Commands
+        // * Admin Configuration Commands - Setup, Edit, Remove Commands
+        if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCongifCommands.addTeams.execute(interaction); }
+        if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCongifCommands.removeTeams.execute(interaction); }
+        if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCongifCommands.editTeams.execute(interaction); }
+        // //
+        if (commandName === 'add-rank') { console.log(`add-rank command ran`); await adminCongifCommands.addRank.execute(interaction); }
+        if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await adminCongifCommands.editRank.execute(interaction); }
+        if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await adminCongifCommands.removeRank.execute(interaction); } 
+        // //
+        if (commandName === 'daily-rank-up-channel') { console.log(`daily-rank-up-channel`); await adminCongifCommands.dailyRankUpChannel.execute(interaction); }
+        if (commandName === 'log-channel') {  console.log(`log-channel`); await adminCongifCommands.logChannel.execute(interaction); }
 
-    // ? Config Commands
-    // * Admin Configuration Commands - Setup, Edit, Remove Commands
-    if (commandName === 'add-team') { console.log(`add-team command ran`); await adminCongifCommands.addTeams.execute(interaction); }
-    if (commandName === 'remove-team') { console.log(`remove-team command ran`); await adminCongifCommands.removeTeams.execute(interaction); }
-    if (commandName === 'edit-team') { console.log(`edit-team command ran`); await adminCongifCommands.editTeams.execute(interaction); }
-    // //
-    if (commandName === 'add-rank') { console.log(`add-rank command ran`); await adminCongifCommands.addRank.execute(interaction); }
-    if (commandName === 'edit-rank') { console.log(`edit-rank command ran`); await adminCongifCommands.editRank.execute(interaction); }
-    if (commandName === 'remove-rank') { console.log(`remove-rank command ran`); await adminCongifCommands.removeRank.execute(interaction); } 
-    // //
-    if (commandName === 'daily-rank-up-channel') { console.log(`daily-rank-up-channel`); await adminCongifCommands.dailyRankUpChannel.execute(interaction); }
-    if (commandName === 'log-channel') {  console.log(`log-channel`); await adminCongifCommands.logChannel.execute(interaction); }
+        // //
 
-    // //
+        // * Community Configuration Commands - Setup, Edit, Remove Commands
+        // ! Add Commands Here
 
-    // * Community Configuration Commands - Setup, Edit, Remove Commands
-    // ! Add Commands Here
+        // //
 
-    // //
+        // * Community Commands - Comps
+        if (commandName === 'view-teams') { console.log(`view-teams command ran`); await communityCommands.viewTeams.execute(interaction); }
+        if (commandName === 'view-team') { console.log(`view-team command ran`); await communityCommands.viewTeam.execute(interaction); }
+        if (commandName === 'leaderboard') { console.log(`leaderboard command ran`); await communityCommands.leaderboard.execute(interaction); }
+        if (commandName === 'team-leaderboard') { console.log(`team-leaderboard command ran`); await communityCommands.teamLeaderboard.execute(interaction); }
+        if (commandName === 'team-points') { console.log(`team-points command ran`); await communityCommands.teamPoints.execute(interaction); }
+        if (commandName === 'team-info') { console.log(`team-info command ran`); await communityCommands.teamInfo.execute(interaction); }
 
-    // * Community Commands - Comps
-    if (commandName === 'view-teams') { console.log(`view-teams command ran`); await communityCommands.viewTeams.execute(interaction); }
-    if (commandName === 'view-team') { console.log(`view-team command ran`); await communityCommands.viewTeam.execute(interaction); }
-    if (commandName === 'leaderboard') { console.log(`leaderboard command ran`); await communityCommands.leaderboard.execute(interaction); }
-    if (commandName === 'team-leaderboard') { console.log(`team-leaderboard command ran`); await communityCommands.teamLeaderboard.execute(interaction); }
-    if (commandName === 'team-points') { console.log(`team-points command ran`); await communityCommands.teamPoints.execute(interaction); }
-    if (commandName === 'team-info') { console.log(`team-info command ran`); await communityCommands.teamInfo.execute(interaction); }
+        // //
 
-    // //
+        // * Community Commands - Ranks
+        if (commandName === 'profile') { console.log(`profile command ran`); await communityCommands.profile.execute(interaction); }
+        if (commandName === 'view-ranks') { console.log(`view-ranks command ran`); await communityCommands.viewRanks.execute(interaction); }
+        
+        // //
 
-    // * Community Commands - Ranks
-    if (commandName === 'profile') { console.log(`profile command ran`); await communityCommands.profile.execute(interaction); }
-    if (commandName === 'view-ranks') { console.log(`view-ranks command ran`); await communityCommands.viewRanks.execute(interaction); }
-    
-    // //
+        //  * Community Commands - Join, Leave Teams
 
-    //  * Community Commands - Join, Leave Teams
+        if (commandName === 'join-team') { console.log(`join-team command ran`); await communityCommands.joinTeam.execute(interaction); }
+        if (commandName === 'leave-team') { console.log(`leave-team command ran`); await communityCommands.leaveTeam.execute(interaction); }
+        // //
+        if (commandName === 'admin-force-join-team') { console.log(`force-join command ran`); await adminCommands.forceJoin.execute(interaction); }
+        if (commandName === 'admin-force-leave-team') { console.log(`force-leave command ran`); await adminCommands.forceLeave.execute(interaction); }
+        if (commandName === 'team-leader-kick-member') { console.log(`team-leader-kick-member command ran`); await adminCommands.teamLeaderKickMember.execute(interaction); }
 
-    if (commandName === 'join-team') { console.log(`join-team command ran`); await communityCommands.joinTeam.execute(interaction); }
-    if (commandName === 'leave-team') { console.log(`leave-team command ran`); await communityCommands.leaveTeam.execute(interaction); }
-    // //
-    if (commandName === 'admin-force-join-team') { console.log(`force-join command ran`); await adminCommands.forceJoin.execute(interaction); }
-    if (commandName === 'admin-force-leave-team') { console.log(`force-leave command ran`); await adminCommands.forceLeave.execute(interaction); }
-    if (commandName === 'team-leader-kick-member') { console.log(`team-leader-kick-member command ran`); await adminCommands.teamLeaderKickMember.execute(interaction); }
+        // //
 
-    // //
-
-    // * Help Menu Interaction
-    if (interaction.customId === 'help_menu') { await helpMenuCommands.help_menu_selected.execute(interaction) }
+        // * Help Menu Interaction
+        if (interaction.customId === 'help_menu') { await helpMenuCommands.help_menu_selected.execute(interaction) }
+    } catch(err) {
+        // Embed message saying error
+        const errorEmbed = new EmbedBuilder()
+            .setTitle('Error')
+            .setDescription('An error occurred while executing your command. Please try again later.')
+            .setColor(0xFF0000);
+        await interaction.reply({ embeds: [errorEmbed] });
+        console.error(`Error executing command ${commandName}:`, err);
+    }
 });
 
 // //

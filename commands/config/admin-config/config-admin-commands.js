@@ -38,7 +38,7 @@ module.exports = {
 
                 const embed = new EmbedBuilder()
                     .setTitle('Team Added')
-                    .setDescription(`Team ${teamName} has been added with ID: ${uniqueTeamId}.`)
+                    .setDescription(`Team **"${teamName}"** has been added with ID: ${uniqueTeamId}.`)
                     .setColor(0x00FF00);
                 interaction.reply({ embeds: [embed] });
             } catch (error) {
@@ -71,7 +71,7 @@ module.exports = {
                 await Teams.destroy({ where: { teamName } });
 
                 // Remove all users in that team from the team
-                await User.update({ teamName: null }, { where: { teamName } });
+                await User.update({ teamId: null }, { where: { teamId } });
 
                 const embed = new EmbedBuilder()
                     .setTitle('Team Removed')

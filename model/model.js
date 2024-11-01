@@ -19,6 +19,12 @@ const User = sequelize.define('User', {
     teamId: {
         type: DataTypes.STRING,
         allowNull: true,
+        references: {
+            model: 'Teams', // References the Teams table
+            key: 'teamId'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL' // If a team is deleted, user’s teamId will be set to NULL
     },
     days: {
         type: DataTypes.INTEGER,
@@ -136,6 +142,14 @@ const Teams = sequelize.define('Teams', {
         allowNull: true,
     }
 });
+
+// //
+
+// Define Associations
+User.belongsTo(Teams, { foreignKey: 'teamId', as: 'team' }); // User has an optional foreign key teamId in Teams
+Teams.hasMany(User, { foreignKey: 'teamId', as: 'members' }); // Teams can have multiple Users
+
+// //
 
 // Syncing the models with the database
 (async () => {

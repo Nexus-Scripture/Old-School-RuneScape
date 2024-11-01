@@ -4,7 +4,6 @@ const { EmbedBuilder } = require('discord.js');
 async function executeLeaderboard(interaction) {
     const serverId = interaction.guild.id;
     const channel = interaction.channel;
-
     try {
         // Fetch user data from the database using Sequelize
         const users = await User.findAll({
@@ -39,8 +38,20 @@ async function executeLeaderboard(interaction) {
 
         const validLeaderboard = leaderboard.filter(user => user !== null); // Remove null entries
 
-        // Prepare fields for leaderboard
-        const usersField = validLeaderboard.map((user, index) => `${index + 1}. **${user.displayName}** - ${user.points}`).join('\n');
+        // Top 3 members get medel emojis
+        const usersField = validLeaderboard.map((user, index) => {
+            let medal = ""; // Variable to hold the medal emoji
+            if (index === 0) {
+                medal = "🥇"; // Gold medal for 1st place
+            } else if (index === 1) {
+                medal = "🥈"; // Silver medal for 2nd place
+            } else if (index === 2) {
+                medal = "🥉"; // Bronze medal for 3rd place
+            } else {
+                medal = `${index + 1}. `; // No medal for others
+            }
+            return `${medal} **${user.displayName}** - ${user.points}`; // Append medal emoji
+        }).join('\n');
 
         // Create leaderboard embed
         const leaderboardEmbed = new EmbedBuilder()

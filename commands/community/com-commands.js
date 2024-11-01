@@ -50,7 +50,29 @@ module.exports = {
                         .setColor(0x9B59B6);
                     await interaction.reply({ embeds: [embed] });
                 } else {
-                    const teamsField = teams.map((team, index) => `${index + 1}. **${team.teamName}** - ${team.teamPoints}`).join('\n');
+                    // const teamsField = teams.map((team, index) => `${index + 1}. **${team.teamName}** - ${team.teamPoints}`).join('\n');
+
+                    const leaderboard = await Promise.all(teams.map(async team => {
+                        return {
+                            displayName: team ? team.teamName : "Unknown Team Name",
+                            points: team.teamPoints
+                        };
+                    }));
+
+                    const validLeaderboard = leaderboard.filter(team => team !== null); // Remove null entries
+                    const teamsField = validLeaderboard.map((team, index) => {
+                        let medal = ""; // Variable to hold the medal emoji
+                        if (index === 0) {
+                            medal = "🥇"; // Gold medal for 1st place
+                        } else if (index === 1) {
+                            medal = "🥈"; // Silver medal for 2nd place
+                        } else if (index === 2) {
+                            medal = "🥉"; // Bronze medal for 3rd place
+                        } else {
+                            medal = `${index + 1}. `; // No medal for others
+                        }
+                        return `${medal} **${team.displayName}** - ${team.points}`; // Append medal emoji
+                    }).join('\n');
                     const embed = new EmbedBuilder()
                         .setTitle('Team Leaderboard')
                         .setDescription(teamsField)
@@ -215,7 +237,7 @@ module.exports = {
             try {
                 const milestoneLevels = await MilestoneLevels.findAll({
                     where: { guildId: interaction.guild.id },
-                    order: [['points', 'ASC']],
+                    order: [['points', 'ASC']]
                 });
                 if (milestoneLevels.length === 0) {
                     const embed = new EmbedBuilder()
@@ -278,7 +300,16 @@ module.exports = {
                 userPoints = await User.findOne({ where: { userId, guildId } }).then(user => user.points).catch(console.error);
                 console.log("User Points:", userPoints);
                 // //
-                userTeam = await Teams.findOne({ where: { teamLeader: userId } }).then(team => team ? team.teamName : 'None').catch(console.error);
+                // Fetch the user's team based on teamId in the User table
+                userTeam = await User.findOne({ 
+                    where: { userId: userId }, // Assuming userId is available in your code
+                    include: {
+                        model: Teams,
+                        as: 'team', // Use the correct alias if you defined associations with aliases
+                        attributes: ['teamName'] // Only retrieve the team name
+                    }
+                }).then(user => user?.team ? user.team.teamName : 'None')
+                .catch(console.error);
                 console.log("User Team:", userTeam);
                 // //
                 userRoles = interaction.member.roles.cache.map(role => role.id);
@@ -299,6 +330,7 @@ module.exports = {
                 // Fetch teams led by the user
                 leadingTeams = await Teams.findAll({ where: { teamLeader: userId } }).then(teams => teams.map(team => team.teamName)).catch(console.error);
                 console.log("Leading Teams:", leadingTeams);
+
                 // Update colors based on points
                 if (userPoints >= 10000) {
                     color = 0xff0000; // Red 
@@ -519,21 +551,29 @@ module.exports = {
                     .setDescription(`You have joined team "${teamName}"!`)
                     .setColor(0x00FF00)
                     .addFields(
-                        { 
-                            name: 'Team', 
-                            value: teamName, 
-                            inline: true 
+                        {
+                            name: 'Team',
+                            value: teamName,
+                            inline: true
                         },
-                        { 
-                            name: 'Members', 
-                            value: `${teamMembers.length}`, 
-                            inline: true 
+                        {
+                            name: 'Members',
+                            value: `${teamMembers.length}`,
+                            inline: true
+                        },
+                        {
+                            name: 'Points',
+                            value: `${team.teamPoints}`,
+                            inline: true
                         }
                     )
                     .setTimestamp();
     
                 // Optional: Log to a specific channel
-                const logChannel = interaction.guild.channels.cache.get('YOUR_LOG_CHANNEL_ID');
+                const logToChannel = Server.findOne({ where: { guildId: interaction.guild.id } });
+                console.log(`Logging Channel Id: ${logToChannel.loggingChannelId}`);
+
+                const logChannel = interaction.guild.channels.cache.get(logToChannel.loggingChannelId);
                 if (logChannel) {
                     logChannel.send({
                         content: `${interaction.user.tag} joined team "${teamName}"`
@@ -595,8 +635,32 @@ module.exports = {
                 // Clear the teamId in the User table
                 await user.update({ teamId: null });
                 console.log(`User  ${interaction.user.id} has left team ${teamName}.`);
+                
+                // Send embed message
+                const successEmbed = new EmbedBuilder()
+                    .setTitle("✅ Team Left Successfully")
+                    .setDescription(`You have left team "${teamName}"!`)
+                    .setColor(0xe47830)
+                    .addFields(
+                        {
+                            name: 'Team',
+                            value: teamName,
+                            inline: true
+                        },
+                        {
+                            name: 'Members',
+                            value: `${teamMembers.length}`,
+                            inline: true
+                        },
+                        {
+                            name: 'Points',
+                            value: `${team.teamPoints}`,
+                            inline: true
+                        }
+                    )
+                    .setTimestamp();
     
-                await interaction.reply({ content: `You have left team ${teamName}!` });
+                await interaction.reply({ embeds: [successEmbed] });
             } catch (error) {
                 console.error("Error leaving team:", error);
                 await interaction.reply({ content: "There was an error leaving the team. Please try again later.", ephemeral: true });
