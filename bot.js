@@ -448,7 +448,7 @@ const logConfigCommands = require('./commands/config/log-config/config-logging-c
 // ! Once Client On = Prime Commands and Database verification
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
-    initializePaymentReminder(client);
+    // initializePaymentReminder(client);
 
     try {
         console.log('Started refreshing application (/) commands');
@@ -524,6 +524,8 @@ client.on('ready', async () => {
 
                 // Check if the member is already in the database
                 const existingUser  = await User.findOne({ where: { userId: member.id, guildId: guild.id } });
+                console.log(`Existing User:`);
+                console.log(existingUser);
                 
                 if (!existingUser) {
                     // Add the member to the database
@@ -533,6 +535,8 @@ client.on('ready', async () => {
                         guildId: guild.id,
                         days: 0,
                         points: 0,
+                        teamId: null,
+                        ranks: null,
                         joinDate: new Date(), // Set the join date to now or use the member's join date
                     });
                     console.log(`Added user ${member.user.username} to the database.`);
@@ -559,7 +563,7 @@ client.on(Events.GuildCreate, async guild => {
 
         const existingServer = await Server.findOne({ where: { serverId: guild.id } }); // ! RETURNING NULL
         
-        console.log(`Existing Servers: ${existingServer}`);     
+        console.log(`Existing Servers: ${existingServer}`);
         console.log(`Server ID: ${process.env.SERVER_ID}`);
         console.log(`Other ID: ${process.env.OTHER_SERVER_ID}`);
         console.log(`Debug ID: ${process.env.DEBUG_SERVER_ID}`);
@@ -576,8 +580,8 @@ client.on(Events.GuildCreate, async guild => {
             console.log(`Leaving guild: ${guild.name} (ID: ${guild.id})`);
             
             // Find a suitable channel to send the message
-            const channel = guild.channels.cache.find(ch => 
-                ch.type === ChannelType.GuildText && 
+            const channel = guild.channels.cache.find(ch =>
+                ch.type === ChannelType.GuildText &&
                 ch.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.SendMessages)
             );
 

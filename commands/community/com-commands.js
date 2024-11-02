@@ -246,18 +246,32 @@ module.exports = {
                         .setColor('#0099ff');
                     await interaction.reply({ embeds: [embed] });
                 } else {
+                    let dayDurations;
+
                     const embed = new EmbedBuilder()
                         .setTitle('🏆 View Rank')
                         .setDescription('Milestone levels for this guild:')
                         .setColor('#0099ff');
                     milestoneLevels.forEach((level, index) => {
-                        embed.addFields(
-                            {
-                                name: `🔹 ${index + 1}. ${level.name}`,
-                                value: `⭐️ Points: **${level.points}**\n🕒️ Duration: **${level.durationDays}** days\n💬 Description: *${level.description}*`, 
-                                inline: true
-                            }
-                        );
+                        if (level.durationDays < 9999) {
+                            dayDurations = `\n⏳ Duration: **${level.durationDays}** days`;
+
+                            embed.addFields(
+                                {
+                                    name: `🔹 ${index + 1}. ${level.name}`,
+                                    value: `⭐️ Points: **${level.points}**${dayDurations}\n💬 Description: *${level.description}*`, 
+                                    inline: true
+                                }
+                            );
+                        } else {
+                            embed.addFields(
+                                {
+                                    name: `🔹 ${index + 1}. ${level.name}`,
+                                    value: `⭐️ Points: **${level.points}**\n💬 Description: *${level.description}*`, 
+                                    inline: true
+                                }
+                            );
+                        }
                     });
                     await interaction.reply({ embeds: [embed] });
                 }
