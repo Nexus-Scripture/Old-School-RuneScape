@@ -438,7 +438,7 @@ const adminCommands = require('./commands/admin/admin-commands.js');
 const adminCongifCommands = require('./commands/config/admin-config/config-admin-commands.js')
 const communityCommands = require('./commands/community/com-commands.js');
 const helpMenuCommands = require('./commands/help/help-commands.js');
-const configCommands = require('./commands/config/log-config/config-logging-commands.js');
+const logConfigCommands = require('./commands/config/log-config/config-logging-commands.js');
 
 // //
 
