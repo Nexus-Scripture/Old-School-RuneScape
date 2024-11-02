@@ -55,7 +55,11 @@ module.exports = {
     removeTeams: {
         execute: async (interaction) => {
             const teamName = interaction.options.getString('team-name');
+            const teamId = Teams.findOne({ where: { teamName } });
             const users = User.findAll({ where: { guildId: interaction.guild.id } });
+            console.log(users);
+            console.log(users.teamId);
+            console.log(users.teamId === teamId);
 
             try {
                 // Check if the team exists
@@ -68,11 +72,12 @@ module.exports = {
                     return interaction.reply({ embeds: [embed], ephemeral: true });
                 }
 
+                
+                // Remove all users in that team from the team
+                if (users.teamId === teamId) { await User.update({ teamId: null }, { where: { teamId } }); }
+                
                 // Remove the team from the database
                 await Teams.destroy({ where: { teamName } });
-
-                // Remove all users in that team from the team
-                if (users.teamId === teamName) { await User.update({ teamId: null }, { where: { teamId } }); }
 
                 const embed = new EmbedBuilder()
                     .setTitle('Team Removed')
