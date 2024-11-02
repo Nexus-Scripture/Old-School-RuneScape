@@ -557,8 +557,21 @@ client.on(Events.GuildCreate, async guild => {
     try {
         console.log(`Joined a new guild: ${guild.name} (ID: ${guild.id})`);
 
-        const existingServer = await Server.findOne({ where: { serverId: guild.id } });
-        if (existingServer != process.env.DEBUG_SERVER_ID || existingServer != process.env.SERVER_ID) {
+        const existingServer = await Server.findOne({ where: { serverId: guild.id } }); // ! RETURNING NULL
+        
+        console.log(`Existing Servers: ${existingServer}`);     
+        console.log(`Server ID: ${process.env.SERVER_ID}`);
+        console.log(`Other ID: ${process.env.OTHER_SERVER_ID}`);
+        console.log(`Debug ID: ${process.env.DEBUG_SERVER_ID}`);
+
+        console.log(`
+            Does server exist:\n
+            1. ${existingServer === process.env.SERVER_ID}\n
+            2. ${existingServer === process.env.OTHER_SERVER_ID}\n
+            3. ${existingServer === process.env.DEBUG_SERVER_ID}\n
+            `);
+
+        if (existingServer != process.env.SERVER_ID || existingServer != process.env.DEBUG_SERVER_ID) {
 
             console.log(`Leaving guild: ${guild.name} (ID: ${guild.id})`);
             
