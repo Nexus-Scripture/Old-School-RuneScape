@@ -56,7 +56,7 @@ This codebase is uses discord.js, sqlite3, .env, and a few other packages. If yo
 
 # How to get working:
 1. Do `npm install` to install all dependencies from package.json.
-2. Do `node model.js` file to create a database.
+2. Navigate to the model folder (`cd model/`) and do `node model.js` file to create a database.
 3. Fill out `.env`.
 4. Run Bot.
    1. Local Machine: Use `Run and Debug` menu. Do NOT just do `node bot.js`, it wont break, you'll just look dumb.
