@@ -33,12 +33,12 @@
 <br/>
 
 <div align="center">
-    <p>Bot was made for Untitled Discord Server as a commission. If you want your own custom Discord Bot, contact me via</p> 
+    <p>Bot was made for Iron Valor Discord Server as a commission. If you want your own custom Discord Bot, contact me via</p> 
 </div>
 
 <div align=center>
 
-# BOT NOT READY FOR PRODUCTION
+# BOT READY FOR PRODUCTION
 
 </div>
 
