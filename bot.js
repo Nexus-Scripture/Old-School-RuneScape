@@ -11,6 +11,7 @@ const {
     PermissionsBitField,
     AuditLogEvent,
     EmbedBuilder,
+    ActivityType,
 } = require("discord.js");
 
 const client = new Client({ 
@@ -448,6 +449,9 @@ client.once('ready', async () => {
 
     try {
         console.log('Started refreshing application (/) commands');
+
+        client.user.setActivity('Old School RuneScape', { type: ActivityType.Playing });
+        client.user.setStatus('dnd');
 
         // Fetch all guilds the bot is in
         const guilds = await client.guilds.fetch();
