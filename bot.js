@@ -44,6 +44,8 @@ const { User, Server, MilestoneLevels, Teams } = require ('./model/model.js');
 
 // ! Log Events Logic
 const { processLogs } = require('./events/logEvents.js');
+const { initializePaymentReminder } = require('./events/paymentTime');
+
 
 // //
 
@@ -434,7 +436,7 @@ async function setupCommands() {
 
 // //
 
-// ! Import command logic 
+// ! Import command logic
 const adminCommands = require('./commands/admin/admin-commands.js');
 const adminCongifCommands = require('./commands/config/admin-config/config-admin-commands.js')
 const communityCommands = require('./commands/community/com-commands.js');
@@ -446,6 +448,7 @@ const logConfigCommands = require('./commands/config/log-config/config-logging-c
 // ! Once Client On = Prime Commands and Database verification
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
+    initializePaymentReminder(client);
 
     try {
         console.log('Started refreshing application (/) commands');
