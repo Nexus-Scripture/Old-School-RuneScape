@@ -54,6 +54,7 @@ Submit an `Issue` and tell me what's wrong.
 
 This codebase is uses discord.js, sqlite3, .env, and a few other packages. If you experience a problem with a package, don't blame me.
 
+# How to get working:
 1. Do `npm install` to install all dependencies from package.json.
 2. Do `node model.js` file to create a database.
 3. Fill out `.env`.
